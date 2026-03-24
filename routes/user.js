@@ -33,7 +33,7 @@ router
   .route('/login')
   .get(async (req, res) => {
     //code here for GET
-    res.render('login');
+    res.render('login', {layout: 'LR.handlebars'});
     // res.sendFile(path.join(__dirname, '/views/login.html'));
    })
   .post([
@@ -68,7 +68,7 @@ router
   .route('/register')
   .get(async (req, res) => {
     //code here for GET
-    res.render('register');
+    res.render('register', {layout: 'LR.handlebars'});
     // res.sendFile(path.join(__dirname, '/views/register.html'));
    }) 
   .post([
