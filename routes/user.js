@@ -23,7 +23,8 @@ router
   .route('/')
   .get(authRedirectMW, async (req, res) => {
     // code here for GET
-    res.sendFile(path.join(__dirname, '/views/index.html'));
+    res.render('index');
+    // res.sendFile(path.join(__dirname, '/views/index.html'));
    });
 
 // Give the login page in html
@@ -32,7 +33,8 @@ router
   .route('/login')
   .get(async (req, res) => {
     //code here for GET
-    res.sendFile(path.join(__dirname, '/views/login.html'));
+    res.render('login');
+    // res.sendFile(path.join(__dirname, '/views/login.html'));
    })
   .post([
     body('email').notEmpty().escape().isEmail().withMessage('Enter a valid email'), // body('username').notEmpty().escape(),
@@ -66,7 +68,8 @@ router
   .route('/register')
   .get(async (req, res) => {
     //code here for GET
-    res.sendFile(path.join(__dirname, '/views/register.html'));
+    res.render('register');
+    // res.sendFile(path.join(__dirname, '/views/register.html'));
    }) 
   .post([
     body('username').notEmpty().withMessage("Enter a not empty username").escape(),

@@ -16,7 +16,8 @@ router
   .route('/')
   .get(authMW, async (req, res) => {
     //code here for GET
-    res.sendFile(path.join(__dirname, '/views/forum.html'));
+    res.render('forum');
+    // res.sendFile(path.join(__dirname, '/views/forum.html'));
    });
 
 

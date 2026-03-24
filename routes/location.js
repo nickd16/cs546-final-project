@@ -17,7 +17,8 @@ router
   .route('/')
   .get(authMW, async (req, res) => {
     //code here for GET
-    res.sendFile(path.join(__dirname, '/views/location.html'));
+    res.render('location');
+    // res.sendFile(path.join(__dirname, '/views/location.html'));
    });
 
 
