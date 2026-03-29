@@ -1,6 +1,6 @@
 import {Router} from 'express';
 import { registerUser, getLoginToken } from '../data/user.js';
-import {checkDupUsername, validateLoginUser, usernameExists, } from '../helpers.js'
+import {checkDupUsername, validateLoginUser, usernameExists, passwordMatchesHash} from '../helpers.js'
 import {user} from '../config/mongoCollections.js';
 import {ObjectId} from 'mongodb';
 import bcrypt from 'bcryptjs';

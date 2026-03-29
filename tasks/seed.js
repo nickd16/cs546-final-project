@@ -89,14 +89,14 @@ const main = async () => {
             "_id": new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'),
             "dateTimeCreated": new Date("2024-03-29T12:30:00Z"),
             "username": "admin",
-            "password": "$2b$10$JaqSX0wjHVxa2mK550HEZeHa7YRT9kdWgydwvhYNqeQb/wsihMxeC",
+            "hashedPassword": "$2b$10$JaqSX0wjHVxa2mK550HEZeHa7YRT9kdWgydwvhYNqeQb/wsihMxeC",
             "isAdmin": true
         },
         { 
             "_id": new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1'),
             "dateTimeCreated": new Date("2024-03-29T12:30:00Z"),
             "username": "bob",
-            "password": "$2b$10$JaqSX0wjHVxa2mK550HEZeHa7YRT9kdWgydwvhYNqeQb/wsihMxeC",
+            "hashedPassword": "$2b$10$JaqSX0wjHVxa2mK550HEZeHa7YRT9kdWgydwvhYNqeQb/wsihMxeC",
             "isAdmin": false
         },
     ];
