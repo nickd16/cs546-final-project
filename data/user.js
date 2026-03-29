@@ -14,7 +14,7 @@ export const registerUser = async (
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const userCollection = await user();
-  const insertResponse = await userCollection.insertOne({username: username, "hashedPassword": hashedPassword, isAdmin: false});
+  const insertResponse = await userCollection.insertOne({"dateTimeCreated": new Date(), username: username, "hashedPassword": hashedPassword, "favLocationIds": [], isAdmin: false});
   const insertedUser = await userCollection.findOne({_id: insertResponse._id});
   return insertedUser; // return user in question
 };

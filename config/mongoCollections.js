@@ -16,5 +16,5 @@ const getCollectionFn = (collection) => {
 export const user = getCollectionFn('user');
 export const location = getCollectionFn('location');
 export const forum = getCollectionFn('forum');
-// Report
-// Location Requests
+export const report = getCollectionFn('report');
+export const locationRequest = getCollectionFn('locationRequest');
