@@ -22,3 +22,7 @@
 .menua:hover {
     background-color: #111;
 }
+
+.error {
+    color: red;
+}

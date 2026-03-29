@@ -1,6 +1,6 @@
 import {Router} from 'express';
-import { registerUser } from '../data/user.js';
-import {checkDupUsername} from '../helpers.js'
+import { registerUser, getLoginToken } from '../data/user.js';
+import {checkDupUsername, validateLoginUser, usernameExists, } from '../helpers.js'
 import {user} from '../config/mongoCollections.js';
 import {ObjectId} from 'mongodb';
 import bcrypt from 'bcryptjs';
@@ -32,7 +32,12 @@ router
     // res.sendFile(path.join(__dirname, '/views/login.html'));
    })
   .post([
-    body('username').notEmpty().escape(),
+    body('username').notEmpty().escape().custom(async value => {
+      const username = await usernameExists(value);
+      if (!username) {
+          throw Error("No username found!");
+      }
+    }),
     body('password').notEmpty().escape().isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
   ],
   async (req, res) => {
@@ -40,19 +45,24 @@ router
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { username, password } = req.body;
-
+    
     try {
-      // find user document
-      const user = await user.findOne({ username: username });
-      if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-
-      const token = jwt.sign({ id: user._id, role: user.role }, 'secretkeygoeshere', { expiresIn: '1h' }); // Replace secretkeygoeshere with a better solution
-      res.status(200).json({ token, message: 'Logged in successfully' });
+      await passwordMatchesHash(username, password);
     } catch (err) {
-      res.status(500).json({ message: 'Error logging in', error: err.message });
+      return res.status(400).json({ error: err.message });
+    }
+
+    // login and get token
+    try {
+      const token = await getLoginToken(username, password);
+
+      // res.status(200).json({ token, message: 'Logged in successfully' });
+      // res.send(token);
+      // console.log(token);
+      req.session.token = token; // Using sessions
+      return res.redirect('/');
+    } catch (err) {
+      return res.status(500).json({ message: 'Error logging in', error: err.message });
     }
   });
 
@@ -67,28 +77,20 @@ router
     // res.sendFile(path.join(__dirname, '/views/register.html'));
    }) 
   .post([
-    body('username').notEmpty().withMessage("Enter a not empty username").escape(),
+    body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
+      await checkDupUsername(value); // check duplicate username
+    }),
     body('password').notEmpty().withMessage("Enter a not empty password").escape().isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
   ], async (req, res) => {
     //code here for POST
+    // validation
     const errors = validationResult(req); // This will check for the username and password validation errors
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { username, password } = req.body; // Need to ensure username and password exist
 
     try {
-      // Check for duplicate usernames
-      await checkDupUsername(username);
-    } catch (err) {
-      return res.status(400).json({ message: 'Duplicate username', error: err.message });
-    }
-    
-
-    try {
-      // Really we can choose our pick of what hashing function we use I'm just using bcrypt for now
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const user = await registerUser(username, hashedPassword);
+      const user = await registerUser(username, password);
 
       res.status(201).json({ message: 'User registered successfully' });
     } catch (err) {
