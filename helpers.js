@@ -1,6 +1,8 @@
 import validator from 'validator';
 import bcrypt from 'bcryptjs';
 import {user} from './config/mongoCollections.js'
+import { ObjectId } from 'mongodb';
+
 export const checkDupUsername = async (username) => {
     await validateUsernameField(username);
 
@@ -37,33 +39,6 @@ export const passwordMatchesHash = async (username, password) => {
     return isMatch;
 };
 
-// user parameter validation function
-export const validateUserPara = async (username, password) => {
-    await validateUsernameField(username);
-
-    await validatePasswordField(password);
-
-    // Check for duplicate usernames
-    await checkDupUsername(username);
-
-
-    return true;
-};
-
-export const validateLoginUser = async (username, password) => {
-    await validateUsernameField(username);
-
-    await validatePasswordField(password);
-    
-    const userExist = await usernameExists(username);
-    if (!userExist) throw Error("Invalid credentials");
-
-    const isMatch = await passwordMatchesHash(username, password);
-    if (!isMatch) throw Error("Invalid credentials");
-
-    return true;
-};
-
 export const validateUsernameField = async (username) => { // We can keep these validaters up to date so across anywhere we used the field we will check
     if (typeof username == 'undefined') {
         throw Error("Username is undefined!");
@@ -71,10 +46,11 @@ export const validateUsernameField = async (username) => { // We can keep these 
     if (typeof username != 'string') {
         throw Error("Username is not string!");
     }
-    if (!validator.isAlphanumeric(username)) {
+    const trimmedUsername = username.trim();
+    if (!validator.isAlphanumeric(trimmedUsername)) {
         throw Error("Username is not alphanumerical!");
     }
-    return true;
+    return trimmedUsername;
 };
 
 export const validatePasswordField = async (password) => {
@@ -84,10 +60,58 @@ export const validatePasswordField = async (password) => {
     if (typeof password != 'string') {
         throw Error("Password is not string!");
     }
-    if (password.length < 6) { // Less then 6 characters
-        throw Error("Password is less then 6 characters");
+    const trimmedPassword = password.trim();
+    if (trimmedPassword.length < 6) { // Less then 6 characters
+        throw Error("Password is less then 6 characters!");
     }
-    return true;
+    return password;
+};
+
+export const validateHashedPasswordField = async (hashedPassword) => {
+    if (typeof hashedPassword == 'undefined') {
+        throw Error("hashedPassword is undefined!");
+    }
+    if (typeof hashedPassword != 'string') {
+        throw Error("hashedPassword is not string!");
+    }
+    return hashedPassword;
+};
+
+export const validateIsAdminField = async (isAdmin) => {
+    if (typeof isAdmin == 'undefined') {
+        throw Error("isAdmin is undefined!");
+    }
+    if (typeof isAdmin != 'boolean') {
+        throw Error("isAdmin is not boolean!");
+    }
+    return isAdmin;
+};
+
+export const validateFavLocationIdsField = async (favLocationIds) => {
+    if (typeof favLocationIds == 'undefined') {
+        throw Error("favLocationIds is undefined!");
+    }
+    if (typeof favLocationIds != 'object') {
+        throw Error("favLocationIds is not object!");
+    }
+    for (let locationId of favLocationIds) { // Validate all ids in favLocationIdsField
+        locationId = await validateIdField(locationId);
+    }
+    return favLocationIds;
+};
+
+export const validateIdField = async (id) => { // We can keep these validaters up to date so across anywhere we used the field we will check
+    if (typeof id == 'undefined') {
+        throw Error("id is undefined!");
+    }
+    if (typeof id != 'string') {
+        throw Error("id is not string!");
+    }
+    id = id.trim();
+    if (id.length === 0)
+        throw 'id cannot be an empty string or just spaces!';
+    if (!ObjectId.isValid(id)) throw 'invalid object ID!';
+    return id;
 };
 
 

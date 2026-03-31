@@ -1,6 +1,6 @@
 import {Router} from 'express';
 import { registerUser, getLoginToken } from '../data/user.js';
-import {checkDupUsername, validateLoginUser, usernameExists, passwordMatchesHash} from '../helpers.js'
+import {checkDupUsername, usernameExists, passwordMatchesHash, validateUsernameField, validatePasswordField} from '../helpers.js'
 import {user} from '../config/mongoCollections.js';
 import {ObjectId} from 'mongodb';
 import bcrypt from 'bcryptjs';
@@ -32,13 +32,16 @@ router
     // res.sendFile(path.join(__dirname, '/views/login.html'));
    })
   .post([
-    body('username').notEmpty().escape().custom(async value => {
+    body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
+      value = await validateUsernameField(value);
       const username = await usernameExists(value);
       if (!username) {
           throw Error("No username found!");
       }
     }),
-    body('password').notEmpty().escape().isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+    body('password').notEmpty().withMessage("Enter a not empty password").custom(async value => {
+      value = await validatePasswordField(value);
+    })
   ],
   async (req, res) => {
     const errors = validationResult(req); // This will check for the username and password validation errors
@@ -78,9 +81,12 @@ router
    }) 
   .post([
     body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
+      value = await validateUsernameField(value);
       await checkDupUsername(value); // check duplicate username
     }),
-    body('password').notEmpty().withMessage("Enter a not empty password").escape().isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+    body('password').notEmpty().withMessage("Enter a not empty password").custom(async value => {
+      value = await validatePasswordField(value);
+    })
   ], async (req, res) => {
     //code here for POST
     // validation

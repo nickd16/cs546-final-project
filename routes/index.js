@@ -11,6 +11,7 @@ const constructorMethod = (app) => {
   
   app.use('{*splat}', (req, res) => {
     res.status(404).json({error: 'Route Not found'});
+    // res.status(404).render('error', {"error_text": "Route not found"});
   });
 };
 

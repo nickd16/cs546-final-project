@@ -7,7 +7,6 @@ const main = async () => {
     await db.dropDatabase();
 
     
-
     let sampleLocations = [
         { 
             "_id": new ObjectId('62b7c2f8f1d4c3b2f8e4b1a1'),
@@ -48,6 +47,7 @@ const main = async () => {
                 "listOfSignedUpUserIds": [new ObjectId('62b7c2f8f1d4c3b2f8e4b1a1')]
             }],
             "locationName": "Captain William Harry Thompson Playground",
+            "description": "This is a description!",
             "address": "E 174 St. & Bronx River Ave.",
             "latitude": 40.8342,
             "longitude": -73.8775,
@@ -90,6 +90,7 @@ const main = async () => {
             "dateTimeCreated": new Date("2024-03-29T12:30:00Z"),
             "username": "admin",
             "hashedPassword": "$2b$10$JaqSX0wjHVxa2mK550HEZeHa7YRT9kdWgydwvhYNqeQb/wsihMxeC",
+            "favLocationIds": [new ObjectId('62b7c2f8f1d4c3b2f8e4b1a1')],
             "isAdmin": true
         },
         { 
@@ -97,6 +98,7 @@ const main = async () => {
             "dateTimeCreated": new Date("2024-03-29T12:30:00Z"),
             "username": "bob",
             "hashedPassword": "$2b$10$JaqSX0wjHVxa2mK550HEZeHa7YRT9kdWgydwvhYNqeQb/wsihMxeC",
+            "favLocationIds": [],
             "isAdmin": false
         },
     ];
@@ -105,6 +107,8 @@ const main = async () => {
         { 
             "_id": new ObjectId('62b7c3f8f1d4c3b2f8e4b1a1'),
             "dateTimeCreated": new Date("2024-03-29T12:30:00Z"),
+            "status": "waiting",
+            "dateReviewedAt": null,
             "forumOrLocation": "location",
             "typeOfContent": "comment",
             "userId": new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1'),
@@ -124,6 +128,7 @@ const main = async () => {
             "userId": new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1'),
             "body": "This is a location request!",
             "locationName": "52 Playground",
+            "description": "This is a description!",
             "address": "Kelly St. & Ave. St. John",
             "latitude": 40.8149,
             "longitude": -73.9021,

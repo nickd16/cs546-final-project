@@ -29,7 +29,7 @@ export const authMW = (req, res, next) => {
   }
 };
 
-export const roleMW = (requiredRole) => (req, res, next) => {
-  if (req.user.role !== requiredRole) return res.status(403).json({ message: 'Access forbidden' });
+export const isAdminMW = (req, res, next) => {
+  if (!req.user.isAdmin) return res.status(403).json({ message: 'Access forbidden' }); // return res.redirect('login');
   next();
 };
