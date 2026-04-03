@@ -1,13 +1,13 @@
 import {Router} from 'express';
-import { registerUser, getLoginToken } from '../data/user.js';
-import {checkDupUsername, usernameExists, passwordMatchesHash, validateUsernameField, validatePasswordField} from '../helpers.js'
+import { registerUser, getLoginToken, getUserById, addFavLocationToUserById, removeFavLocationToUserById } from '../data/user.js';
+import {checkDupUsername, usernameExists, passwordMatchesHash, validateUsernameField, validatePasswordField, validateIdField} from '../helpers.js'
 import {user} from '../config/mongoCollections.js';
 import {ObjectId} from 'mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authRedirectMW } from './middleware.js';
+import { authRedirectMW, authMW } from './middleware.js';
 
-import { body, validationResult } from 'express-validator'
+import { body, check, param, validationResult } from 'express-validator'
 
 const router = Router();
 
@@ -101,6 +101,84 @@ router
       res.status(201).json({ message: 'User registered successfully' });
     } catch (err) {
       res.status(500).json({ message: 'Error registering user', error: err.message });
+    }
+   });
+  
+   router.route('/user/:userId').get([authMW, check('userId').notEmpty().custom(async value => {
+      value = await validateIdField(value);
+    })
+  ], async (req, res) => {
+    // code here for GET
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    
+    let userId = req.params.userId;
+
+    let user = {};
+    try {
+      user = await getUserById(userId); // Assuming the user doesn't contain the hashedPassword 
+    } catch (e) {
+      return res.status(400).json({"error" : e});
+    }
+    // Only publicly available infomation should be getable here unless we make a special self user route for getting private info
+    // delete user["hashedPassword"]; // If they need this they need to be verified!
+    if (req.user.id != userId) { // Only give the users favLocationIds to the user who it belongs to for client side map rendering
+      delete user["favLocationIds"];
+    }
+    return res.status(200).json(user);
+    
+    // res.sendFile(path.join(__dirname, '/views/index.html'));
+   });
+
+   router.route('/user/:userId/favLocations/').post([authMW, check('userId').notEmpty().custom(async value => {
+      value = await validateIdField(value);
+    }), body("locationId").notEmpty().custom(async value => {
+      value = await validateIdField(value);
+    })
+  ], async (req, res) => {
+    // code here for GET
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    
+    let userId = req.params.userId;
+    let locationId = req.body.locationId;
+
+    try {
+      let userLocIds = await addFavLocationToUserById(userId, locationId);
+    } catch (e) {
+      return res.status(400).json({"error" : e});
+    }
+    
+
+    if (req.user.id != userId) {
+      return res.status(200).json(userLocIds);
+    } else {
+      return res.status(400).json({"error":"Not permitted to add to other users favorite locations list!"});
+    }
+   }).delete([authMW, check('userId').notEmpty().custom(async value => {
+      value = await validateIdField(value);
+    }), body("locationId").notEmpty().custom(async value => {
+      value = await validateIdField(value);
+    })
+  ], async (req, res) => {
+    // code here for GET
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    
+    let userId = req.params.userId;
+    let locationId = req.body.locationId;
+
+    try {
+      let userLocIds = await removeFavLocationToUserById(userId, locationId);
+    } catch (e) {
+      return res.status(400).json({"error" : e});
+    }
+    
+
+    if (req.user.id != userId) {
+      return res.status(200).json(userLocIds);
+    } else {
+      return res.status(400).json({"error":"Not permitted to remove ids from other users favorite locations list!"});
     }
    });
 
