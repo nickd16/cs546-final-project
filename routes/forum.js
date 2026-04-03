@@ -19,13 +19,22 @@ const errorTextFromCatch = (e, fallback) => {
 
 router.get('/', authRedirectMW, async (req, res) => {
   console.log('[forum router GET /] reached — rendering forum page');
+  let catagoryFilter = 'all';
+  if (req.query.catagoryFilter) catagoryFilter = String(req.query.catagoryFilter).trim();
+  let qText = '';
+  if (req.query.q) qText = String(req.query.q).trim();
+  let isAll = catagoryFilter === 'all';
+  let isTennis = catagoryFilter === 'tennis';
+  let isBasketball = catagoryFilter === 'basketball';
+  let isHandball = catagoryFilter === 'handball';
+  let isHiking = catagoryFilter === 'hiking';
   try {
-    const posts = await getAllPostsForDisplay();
+    const posts = await getAllPostsForDisplay(catagoryFilter, qText);
     let error = null;
     if (req.query.error) error = String(req.query.error);
-    res.render('forum', { layout: 'main.handlebars', posts, error });
+    res.render('forum', { layout: 'main.handlebars', posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking });
   } catch (e) {
-    res.status(500).render('forum', { layout: 'main.handlebars', posts: [], error: errorTextFromCatch(e, 'Could not load forum') });
+    res.status(500).render('forum', { layout: 'main.handlebars', posts: [], error: errorTextFromCatch(e, 'Could not load forum'), catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking });
   }
 });
 

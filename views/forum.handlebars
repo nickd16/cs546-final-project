@@ -7,6 +7,23 @@
 
     <p><button type="button" id="forumNewPostOpen">New post</button></p>
 
+    <form method="get" action="/forum">
+        <p>Filter:</p>
+        <select name="catagoryFilter">
+            <option value="all" {{#if isAll}}selected{{/if}}>All</option>
+            <option value="tennis" {{#if isTennis}}selected{{/if}}>Tennis</option>
+            <option value="basketball" {{#if isBasketball}}selected{{/if}}>Basketball</option>
+            <option value="handball" {{#if isHandball}}selected{{/if}}>Handball</option>
+            <option value="hiking" {{#if isHiking}}selected{{/if}}>Hiking</option>
+        </select>
+        <p>Search:</p>
+        <input type="text" name="q" value="{{qText}}">
+        <p>
+            <button type="submit">Apply</button>
+            <a href="/forum">Clear</a>
+        </p>
+    </form>
+
     <h2>Posts</h2>
     {{#if posts.length}}
     <ul>

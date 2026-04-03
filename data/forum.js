@@ -40,8 +40,36 @@ export const getAllPosts = async () => {
   return forumCollection.find({}).sort({ dateTimeCreated: -1 }).toArray();
 };
 
-export const getAllPostsForDisplay = async () => {
-  const posts = await getAllPosts();
+export const getAllPostsForDisplay = async (catagoryFilter, q) => {
+  let posts = await getAllPosts();
+
+  let filter = 'all';
+  if (typeof catagoryFilter === 'string') filter = catagoryFilter.trim();
+  if (!FORUM_CATEGORIES.includes(filter)) filter = 'all';
+
+  let search = '';
+  if (typeof q === 'string') search = q.trim().toLowerCase();
+
+  if (filter !== 'all') {
+    const filteredPosts = [];
+    for (let i = 0; i < posts.length; i++) {
+      if (posts[i].catagory === filter) filteredPosts.push(posts[i]);
+    }
+    posts = filteredPosts;
+  }
+
+  if (search) {
+    const filteredPosts = [];
+    for (let i = 0; i < posts.length; i++) {
+      const title = posts[i].title;
+      const body = posts[i].body;
+      const titleText = typeof title === 'string' ? title.toLowerCase() : '';
+      const bodyText = typeof body === 'string' ? body.toLowerCase() : '';
+      if (titleText.indexOf(search) !== -1 || bodyText.indexOf(search) !== -1) filteredPosts.push(posts[i]);
+    }
+    posts = filteredPosts;
+  }
+
   const uidStrings = [...new Set(posts.map((p) => p.userId.toString()))];
   const userMap = {};
   const userCollection = await userCollectionFn();
