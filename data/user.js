@@ -49,7 +49,7 @@ export const getUserById = async (
   _id = await validateIdField(_id);
 
   const userCollection = await user();
-  const user1 = await userCollection.findOne({_id: _id});
+  const user1 = await userCollection.findOne({_id: new ObjectId(_id)});
   if (user1 == null) {
     throw Error("user not found from id!");
   }
@@ -94,11 +94,11 @@ export const updateUserById = async (
   }
 
   const userCollection = await user();
-  const status = await userCollection.updateOne({_id: _id}, updateFields);
+  const status = await userCollection.updateOne({_id: new ObjectId(_id)}, updateFields);
   if (status.matchedCount != 1) {
     throw Error("user not found from id!");
   }
-  const user1 = await userCollection.findOne({_id: _id});
+  const user1 = await userCollection.findOne({_id: new ObjectId(_id)});
   // delete user1["hashedPassword"]; // If they need this they need to be verified! 
   // If we are running this successfully as an attacker we have already messed up as the hashedPassword could be changed so no point of deleting it here
   return user1;
@@ -113,11 +113,11 @@ export const addFavLocationToUserById = async (
   const userCollection = await user();
 
   
-  const status = userCollection.updateOne({"_id": _id}, {$push: {"favLocationIds": favLocationId}});
-  if (status.matchedCount  != 1) {
+  const status = userCollection.updateOne({_id: new ObjectId(_id)}, {$push: {"favLocationIds": new ObjectId(favLocationId)}});
+  if (status.matchedCount != 1) {
     throw Error("user not found from id!");
   }
-  const user1 = await userCollection.findOne({_id: _id}); // After update
+  const user1 = await userCollection.findOne({_id: new ObjectId(_id)}); // After update
   return user1["favLocationIds"]; // just returns the list of favLocationIds
 }
 
@@ -130,11 +130,11 @@ export const removeFavLocationToUserById = async (
   const userCollection = await user();
 
   
-  const status = userCollection.updateOne({"_id": _id}, {$pull: {"favLocationIds": favLocationId}});
+  const status = userCollection.updateOne({"_id": _id}, {$pull: {"favLocationIds": new ObjectId(favLocationId)}});
   if (status.matchedCount != 1) {
     throw Error("user not found from id!");
   }
-  const user1 = await userCollection.findOne({_id: _id}); // After update
+  const user1 = await userCollection.findOne({_id: new ObjectId(_id)}); // After update
   return user1["favLocationIds"]; // just returns the list of favLocationIds
 }
 
@@ -145,8 +145,8 @@ export const deleteUserById = async (
 
   const userCollection = await user();
 
-  const user1 = await userCollection.findOne({_id: _id}); // Before deletion
-  const status = await userCollection.deleteOne({_id: _id});
+  const user1 = await userCollection.findOne({_id: new ObjectId(_id)}); // Before deletion
+  const status = await userCollection.deleteOne({_id: new ObjectId(_id)});
   if (status.deletedCount != 1) {
     throw Error("user not found from id!");
   }
