@@ -10,6 +10,7 @@ const rewriteUnsupportedBrowserMethods = (req, res, next) => {
   // To be that method; so if they post _method=PUT you can now allow browsers to POST to a route that gets
   // rewritten in this middleware to a PUT route
   if (req.body && req.body._method) {
+    console.log('[rewrite _method]', req.path, 'was POST', String(req.body._method));
     req.method = req.body._method;
     delete req.body._method;
   }
@@ -36,6 +37,14 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
+app.use((req, res, next) => {
+  const p = req.path || '';
+  if (p === '/forum' || p.indexOf('/forum/') === 0) {
+    console.log('[FORUM DEBUG] incoming', req.method, 'originalUrl=', req.originalUrl, 'path=', req.path, 'url=', req.url);
+  }
+  next();
+});
 
 app.engine('handlebars', engine());
 app.set('view engine', 'handlebars');
