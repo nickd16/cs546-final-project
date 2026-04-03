@@ -1,3 +1,92 @@
-<body>
+<div>
     <h1>Forum</h1>
-</body>
+
+    {{#if error}}
+    <p class="error">{{error}}</p>
+    {{/if}}
+
+    <p><button type="button" id="forumNewPostOpen">New post</button></p>
+
+    <form method="get" action="/forum">
+        <p>Filter:</p>
+        <select name="catagoryFilter">
+            <option value="all" {{#if isAll}}selected{{/if}}>All</option>
+            <option value="tennis" {{#if isTennis}}selected{{/if}}>Tennis</option>
+            <option value="basketball" {{#if isBasketball}}selected{{/if}}>Basketball</option>
+            <option value="handball" {{#if isHandball}}selected{{/if}}>Handball</option>
+            <option value="hiking" {{#if isHiking}}selected{{/if}}>Hiking</option>
+        </select>
+        <p>Search:</p>
+        <input type="text" name="q" value="{{qText}}">
+        <p>
+            <button type="submit">Apply</button>
+            <a href="/forum">Clear</a>
+        </p>
+    </form>
+
+    <h2>Posts</h2>
+    {{#if posts.length}}
+    <ul>
+        {{#each posts}}
+        <li>
+            <p><strong>{{catagory}}</strong> — {{dateTimeLabel}}</p>
+            <h3>{{title}}</h3>
+            <p>By {{authorUsername}}</p>
+            <p>{{body}}</p>
+            <p>
+                <form action="/forum/{{_idStr}}/like" method="post">
+                    <button type="submit">Like ({{likeCount}})</button>
+                </form>
+                <form action="/forum/{{_idStr}}/dislike" method="post">
+                    <button type="submit">Dislike ({{dislikeCount}})</button>
+                </form>
+                <button type="button">Report</button>
+            </p>
+            <hr>
+        </li>
+        {{/each}}
+    </ul>
+    {{else}}
+    <p>No posts yet.</p>
+    {{/if}}
+
+    <dialog id="forumNewPostDialog">
+        <h2>New post</h2>
+        <form action="/forum" method="post">
+            <p>
+                <label for="forum-title">Title</label><br>
+                <input id="forum-title" name="title" type="text" maxlength="200" required>
+            </p>
+            <p>
+                <label for="forum-category">Category</label><br>
+                <select id="forum-category" name="catagory" required>
+                    <option value="all">All</option>
+                    <option value="tennis">Tennis</option>
+                    <option value="basketball">Basketball</option>
+                    <option value="handball">Handball</option>
+                    <option value="hiking">Hiking</option>
+                </select>
+            </p>
+            <p>
+                <label for="forum-body">Body</label><br>
+                <textarea id="forum-body" name="body" rows="6" maxlength="10000" required></textarea>
+            </p>
+            <p>
+                <button type="submit">Post</button>
+                <button type="button" id="forumNewPostCancel">Cancel</button>
+            </p>
+        </form>
+    </dialog>
+
+    <script>
+    (function () {
+      var dlg = document.getElementById('forumNewPostDialog');
+      var openBtn = document.getElementById('forumNewPostOpen');
+      var cancelBtn = document.getElementById('forumNewPostCancel');
+      if (openBtn && dlg && dlg.showModal) openBtn.addEventListener('click', function () { dlg.showModal(); });
+      else if (openBtn && dlg) openBtn.addEventListener('click', function () { dlg.setAttribute('open', ''); });
+      if (cancelBtn && dlg && dlg.close) cancelBtn.addEventListener('click', function () { dlg.close(); });
+      else if (cancelBtn && dlg) cancelBtn.addEventListener('click', function () { dlg.removeAttribute('open'); });
+    })();
+    </script>
+</div>
