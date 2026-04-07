@@ -1,6 +1,7 @@
 import {user} from '../config/mongoCollections.js';
 import {validateFavLocationIdsField, validateIsAdminField, validateUsernameField, validatePasswordField, validateIdField, usernameExists, passwordMatchesHash, checkDupUsername, validateHashedPasswordField} from '../helpers.js'
 import {ObjectId} from 'mongodb';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 // import valid from 'validator';
 
@@ -20,7 +21,7 @@ export const registerUser = async (
 
   const userCollection = await user();
   const insertResponse = await userCollection.insertOne({"dateTimeCreated": new Date(), username: username, "hashedPassword": hashedPassword, "favLocationIds": [], isAdmin: false});
-  const insertedUser = await getUserById(insertResponse._id);
+  const insertedUser = await getUserById(insertResponse.insertedId.toString());
   return insertedUser; // return user in question
 };
 
@@ -154,4 +155,3 @@ export const deleteUserById = async (
   // delete user1["hashedPassword"]; // If they need this they need to be verified! // User is deleted so what is the point of hiding the hash
   return user1;
 }
-

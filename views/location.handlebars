@@ -1,3 +1,14 @@
-<body>
+<section class="locations-page">
     <h1>Locations</h1>
-</body>
+
+    {{#if error}}
+        <p class="error">{{error}}</p>
+    {{/if}}
+
+    <div id="locations-map" class="locations-map"></div>
+</section>
+
+<script>
+    window.locationMapData = {{{mapLocationsJson}}};
+</script>
+<script src="/public/js/locationMap.js"></script>

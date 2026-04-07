@@ -1,7 +1,5 @@
 import {Router} from 'express';
-import { createLocation} from '../data/location.js';
-import {location} from '../config/mongoCollections.js';
-import {ObjectId} from 'mongodb';
+import { getAllLocationsForMap } from '../data/location.js';
 import { authMW, authRedirectMW} from './middleware.js';
 
 const router = Router();
@@ -11,9 +9,19 @@ const router = Router();
 router
   .route('/')
   .get(authRedirectMW, async (req, res) => {
-    //code here for GET
-    res.render('location');
-    // res.sendFile(path.join(__dirname, '/views/location.html'));
+    try {
+      const mapLocations = await getAllLocationsForMap('all', '');
+      res.render('location', {
+        layout: 'main.handlebars',
+        mapLocationsJson: JSON.stringify(mapLocations)
+      });
+    } catch (e) {
+      res.status(500).render('location', {
+        layout: 'main.handlebars',
+        mapLocationsJson: '[]',
+        error: e && e.message ? e.message : String(e)
+      });
+    }
    });
 
 

@@ -26,3 +26,13 @@
 .error {
     color: red;
 }
+
+.locations-page {
+    padding: 16px;
+}
+
+.locations-map {
+    height: 500px;
+    width: 100%;
+    margin-bottom: 16px;
+}
