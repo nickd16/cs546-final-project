@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
 import { getAllPostsForDisplay, createPost, toggleLikePost, toggleDislikePost, deletePostByUser } from '../data/forum.js';
+import { createForumPostReport } from '../data/report.js';
 
 const router = Router();
 
@@ -67,6 +68,16 @@ router.post('/:postId/delete', authRedirectMW, async (req, res) => {
     return res.redirect(303, '/forum');
   } catch (e) {
     return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not delete post')));
+  }
+});
+
+router.post('/:postId/report', authRedirectMW, async (req, res) => {
+  try {
+    const { reason, description } = req.body;
+    await createForumPostReport(userIdFromSession(req), req.params.postId, reason, description);
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not submit report')));
   }
 });
 

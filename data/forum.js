@@ -119,9 +119,9 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
 
     let title = p.title;
     let body = p.body;
-    if (p.isDeleted) {
-      title = 'Post deleted by user';
-      body = 'Post deleted by user';
+    if (p.isDeleted && (!title || !body)) {
+      title = 'Post deleted';
+      body = 'Post deleted';
     }
 
     let isMine = false;
@@ -178,6 +178,7 @@ export const toggleLikePost = async (postId, userId) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
+  if (post.isDeleted) throw new Error('Cannot like a deleted post');
 
   const uid = new ObjectId(userIdStr);
   let liked = emptyIfMissing(post.likedUserIdList).slice();
@@ -202,6 +203,7 @@ export const toggleDislikePost = async (postId, userId) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
+  if (post.isDeleted) throw new Error('Cannot dislike a deleted post');
 
   const uid = new ObjectId(userIdStr);
   let liked = emptyIfMissing(post.likedUserIdList).slice();

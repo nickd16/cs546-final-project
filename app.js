@@ -2,6 +2,7 @@
 import express from 'express';
 import { engine } from 'express-handlebars';
 import session from 'express-session';
+import jwt from 'jsonwebtoken';
 const app = express();
 import configRoutes from './routes/index.js';
 
@@ -37,6 +38,21 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
+app.use((req, res, next) => {
+  res.locals.isAdmin = false;
+  res.locals.userId = '';
+  const token = req.session && req.session.token ? req.session.token : '';
+  if (!token) return next();
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded && decoded.isAdmin) res.locals.isAdmin = true;
+    if (decoded && decoded.id) res.locals.userId = String(decoded.id);
+  } catch (e) {
+    // ignore invalid token here; auth middleware handles redirects
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const p = req.path || '';

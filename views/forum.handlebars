@@ -39,18 +39,27 @@
             <p>By {{authorUsername}}</p>
             <p>{{body}}</p>
             <p>
+                {{#if isDeleted}}
+                <button type="button" disabled>Like ({{likeCount}})</button>
+                <button type="button" disabled>Dislike ({{dislikeCount}})</button>
+                {{else}}
                 <form action="/forum/{{_idStr}}/like" method="post">
                     <button type="submit">Like ({{likeCount}})</button>
                 </form>
                 <form action="/forum/{{_idStr}}/dislike" method="post">
                     <button type="submit">Dislike ({{dislikeCount}})</button>
                 </form>
+                {{/if}}
                 {{#if isMine}}
                 <form action="/forum/{{_idStr}}/delete" method="post">
                     <button type="submit">Delete</button>
                 </form>
                 {{/if}}
-                <button type="button">Report</button>
+                {{#if isDeleted}}
+                <button type="button" disabled>Report</button>
+                {{else}}
+                <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
+                {{/if}}
             </p>
             <hr>
         </li>
@@ -88,6 +97,30 @@
         </form>
     </dialog>
 
+    <dialog id="forumReportDialog">
+        <h2>Report</h2>
+        <form id="forumReportForm" action="/forum/POST_ID/report" method="post">
+            <p>
+                <label for="forum-report-reason">Why are you reporting?</label><br>
+                <select id="forum-report-reason" name="reason" required>
+                    <option value="spam">Spam</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="hate">Hate</option>
+                    <option value="violence">Violence</option>
+                    <option value="other">Other</option>
+                </select>
+            </p>
+            <p>
+                <label for="forum-report-description">Description</label><br>
+                <textarea id="forum-report-description" name="description" rows="4" maxlength="2000"></textarea>
+            </p>
+            <p>
+                <button type="submit">Submit report</button>
+                <button type="button" id="forumReportCancel">Cancel</button>
+            </p>
+        </form>
+    </dialog>
+
     <script>
     (function () {
       var dlg = document.getElementById('forumNewPostDialog');
@@ -97,6 +130,21 @@
       else if (openBtn && dlg) openBtn.addEventListener('click', function () { dlg.setAttribute('open', ''); });
       if (cancelBtn && dlg && dlg.close) cancelBtn.addEventListener('click', function () { dlg.close(); });
       else if (cancelBtn && dlg) cancelBtn.addEventListener('click', function () { dlg.removeAttribute('open'); });
+
+      var reportDlg = document.getElementById('forumReportDialog');
+      var reportForm = document.getElementById('forumReportForm');
+      var reportCancel = document.getElementById('forumReportCancel');
+      var reportButtons = document.getElementsByClassName('forumReportOpen');
+      for (var i = 0; i < reportButtons.length; i++) {
+        reportButtons[i].addEventListener('click', function (e) {
+          var postId = this.getAttribute('data-postid');
+          if (reportForm && postId) reportForm.setAttribute('action', '/forum/' + postId + '/report');
+          if (reportDlg && reportDlg.showModal) reportDlg.showModal();
+          else if (reportDlg) reportDlg.setAttribute('open', '');
+        });
+      }
+      if (reportCancel && reportDlg && reportDlg.close) reportCancel.addEventListener('click', function () { reportDlg.close(); });
+      else if (reportCancel && reportDlg) reportCancel.addEventListener('click', function () { reportDlg.removeAttribute('open'); });
     })();
     </script>
 </div>
