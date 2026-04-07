@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
-import { getAllPostsForDisplay, createPost, toggleLikePost, toggleDislikePost } from '../data/forum.js';
+import { getAllPostsForDisplay, createPost, toggleLikePost, toggleDislikePost, deletePostByUser } from '../data/forum.js';
 
 const router = Router();
 
@@ -23,18 +23,23 @@ router.get('/', authRedirectMW, async (req, res) => {
   if (req.query.catagoryFilter) catagoryFilter = String(req.query.catagoryFilter).trim();
   let qText = '';
   if (req.query.q) qText = String(req.query.q).trim();
+  let mine = false;
+  if (req.query.mine) mine = true;
   let isAll = catagoryFilter === 'all';
   let isTennis = catagoryFilter === 'tennis';
   let isBasketball = catagoryFilter === 'basketball';
   let isHandball = catagoryFilter === 'handball';
   let isHiking = catagoryFilter === 'hiking';
   try {
-    const posts = await getAllPostsForDisplay(catagoryFilter, qText);
+    const currentUserId = userIdFromSession(req);
+    let onlyUserId = '';
+    if (mine) onlyUserId = currentUserId;
+    const posts = await getAllPostsForDisplay(catagoryFilter, qText, currentUserId, onlyUserId);
     let error = null;
     if (req.query.error) error = String(req.query.error);
-    res.render('forum', { layout: 'main.handlebars', posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking });
+    res.render('forum', { layout: 'main.handlebars', posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
   } catch (e) {
-    res.status(500).render('forum', { layout: 'main.handlebars', posts: [], error: errorTextFromCatch(e, 'Could not load forum'), catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking });
+    res.status(500).render('forum', { layout: 'main.handlebars', posts: [], error: errorTextFromCatch(e, 'Could not load forum'), catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
   }
 });
 
@@ -56,16 +61,29 @@ router.post('/:postId/dislike', authRedirectMW, async (req, res) => {
   }
 });
 
+router.post('/:postId/delete', authRedirectMW, async (req, res) => {
+  try {
+    await deletePostByUser(req.params.postId, userIdFromSession(req));
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not delete post')));
+  }
+});
+
 export const forumCreatePost = async (req, res) => {
   console.log('[forumCreatePost] reached — app.post(/forum) handler');
-  console.log('[forumCreatePost] body keys=', req.body && typeof req.body === 'object' ? Object.keys(req.body) : req.body);
+  let bodyKeys = req.body;
+  if (req.body && typeof req.body === 'object') bodyKeys = Object.keys(req.body);
+  console.log('[forumCreatePost] body keys=', bodyKeys);
   try {
     const { title, body, catagory } = req.body;
     await createPost(userIdFromSession(req), catagory, title, body);
     console.log('[forumCreatePost] createPost ok, redirect /forum');
     return res.redirect(303, '/forum');
   } catch (e) {
-    console.log('[forumCreatePost] error', e && e.message ? e.message : String(e));
+    let msg = String(e);
+    if (e && e.message) msg = String(e.message);
+    console.log('[forumCreatePost] error', msg);
     return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not create post')));
   }
 };

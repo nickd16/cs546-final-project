@@ -40,7 +40,7 @@ export const getAllPosts = async () => {
   return forumCollection.find({}).sort({ dateTimeCreated: -1 }).toArray();
 };
 
-export const getAllPostsForDisplay = async (catagoryFilter, q) => {
+export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, onlyUserId) => {
   let posts = await getAllPosts();
 
   let filter = 'all';
@@ -49,6 +49,19 @@ export const getAllPostsForDisplay = async (catagoryFilter, q) => {
 
   let search = '';
   if (typeof q === 'string') search = q.trim().toLowerCase();
+
+  let currentUserIdStr = '';
+  if (typeof currentUserId === 'string') currentUserIdStr = currentUserId.trim();
+
+  let onlyUserIdStr = '';
+  if (typeof onlyUserId === 'string') onlyUserIdStr = onlyUserId.trim();
+  if (onlyUserIdStr) {
+    const filteredPosts = [];
+    for (let i = 0; i < posts.length; i++) {
+      if (posts[i].userId && posts[i].userId.toString() === onlyUserIdStr) filteredPosts.push(posts[i]);
+    }
+    posts = filteredPosts;
+  }
 
   if (filter !== 'all') {
     const filteredPosts = [];
@@ -63,8 +76,10 @@ export const getAllPostsForDisplay = async (catagoryFilter, q) => {
     for (let i = 0; i < posts.length; i++) {
       const title = posts[i].title;
       const body = posts[i].body;
-      const titleText = typeof title === 'string' ? title.toLowerCase() : '';
-      const bodyText = typeof body === 'string' ? body.toLowerCase() : '';
+      let titleText = '';
+      let bodyText = '';
+      if (typeof title === 'string') titleText = title.toLowerCase();
+      if (typeof body === 'string') bodyText = body.toLowerCase();
       if (titleText.indexOf(search) !== -1 || bodyText.indexOf(search) !== -1) filteredPosts.push(posts[i]);
     }
     posts = filteredPosts;
@@ -102,6 +117,18 @@ export const getAllPostsForDisplay = async (catagoryFilter, q) => {
     const liked = emptyIfMissing(p.likedUserIdList);
     const disliked = emptyIfMissing(p.dislikedUserIdList);
 
+    let title = p.title;
+    let body = p.body;
+    if (p.isDeleted) {
+      title = 'Post deleted by user';
+      body = 'Post deleted by user';
+    }
+
+    let isMine = false;
+    if (currentUserIdStr) {
+      isMine = p.userId.toString() === currentUserIdStr;
+    }
+
     out.push({
       _idStr: p._id.toString(),
       catagory: p.catagory,
@@ -110,10 +137,12 @@ export const getAllPostsForDisplay = async (catagoryFilter, q) => {
       dateTimeLabel,
       userId: p.userId.toString(),
       authorUsername,
-      title: p.title,
-      body: p.body,
+      title,
+      body,
       likeCount: liked.length,
       dislikeCount: disliked.length,
+      isDeleted: Boolean(p.isDeleted),
+      isMine,
     });
   }
   return out;
@@ -187,6 +216,24 @@ export const toggleDislikePost = async (postId, userId) => {
 
   await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $set: { likedUserIdList: liked, dislikedUserIdList: disliked } });
   return getPostById(postId);
+};
+
+export const deletePostByUser = async (postId, userId) => {
+  postId = await validateIdField(postId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
+
+  if (!post.userId || post.userId.toString() !== userIdStr) throw new Error('You can only delete your own post');
+
+  await forumCollection.updateOne(
+    { _id: new ObjectId(postId) },
+    { $set: { isDeleted: true, deletedAt: new Date(), deletedByUserId: new ObjectId(userIdStr), title: 'Post deleted by user', body: 'Post deleted by user' } },
+  );
+  return true;
 };
 
 export { createPost };

@@ -5,9 +5,14 @@
     <p class="error">{{error}}</p>
     {{/if}}
 
-    <p><button type="button" id="forumNewPostOpen">New post</button></p>
+    <p>
+        <button type="button" id="forumNewPostOpen">New post</button>
+        <a href="/forum?mine=1">Your posts</a>
+        <a href="/forum">All posts</a>
+    </p>
 
     <form method="get" action="/forum">
+        {{#if mine}}<input type="hidden" name="mine" value="1">{{/if}}
         <p>Filter:</p>
         <select name="catagoryFilter">
             <option value="all" {{#if isAll}}selected{{/if}}>All</option>
@@ -40,6 +45,11 @@
                 <form action="/forum/{{_idStr}}/dislike" method="post">
                     <button type="submit">Dislike ({{dislikeCount}})</button>
                 </form>
+                {{#if isMine}}
+                <form action="/forum/{{_idStr}}/delete" method="post">
+                    <button type="submit">Delete</button>
+                </form>
+                {{/if}}
                 <button type="button">Report</button>
             </p>
             <hr>
