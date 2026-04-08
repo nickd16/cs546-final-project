@@ -1,0 +1,40 @@
+<div>
+    <h1>Requests</h1>
+
+    {{#if isAdmin}} 
+    {{!-- admin access --}}
+    {{#if error}}
+    <p class="error">{{error}}</p>
+    {{/if}}
+
+    <h2>Location Requests:</h2>
+    {{#if locationRequests.length}}
+    <ul>
+        {{#each locationRequests}}
+        <li>
+            <p><strong>Report Id:</strong> {{this._id}}</p>
+            <p><strong>Location Type:</strong> {{this.locationType}}</p>
+            <p><strong>Location Name:</strong> {{this.locationName}}</p>
+            <p><strong>Reported By:</strong> {{this.userId}}</p>
+            <p><strong>Created:</strong> {{this.dateTimeCreated}}</p>
+            <pre>{{this.body}}</pre>
+
+            <form action="/request/{{this._id}}/reject" method="post">
+                <button type="submit">Reject</button>
+            </form>
+            
+            <hr>
+        </li>
+        {{/each}}
+    </ul>
+    {{else}}
+    <p>Nothing there</p>
+    {{/if}}
+
+    {{else}}
+    {{!-- user access --}}
+    <h2>Create Location Request</h2>
+
+    {{!-- TODO add form --}}
+    {{/if}}
+</div>
