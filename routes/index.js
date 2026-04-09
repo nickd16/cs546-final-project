@@ -1,6 +1,7 @@
 import forumRoutes, { forumCreatePost } from './forum.js';
 import locationRoutes from './location.js';
 import reportRoutes from './report.js';
+import requestRoutes from './request.js';
 import userRoutes from './user.js';
 import { authRedirectMW } from './middleware.js';
 import {static as staticDir} from 'express';
@@ -11,6 +12,7 @@ const constructorMethod = (app) => {
   app.post('/forum', authRedirectMW, forumCreatePost);
   app.use('/forum', forumRoutes);
   app.use('/report', reportRoutes);
+  app.use('/request', requestRoutes);
   app.use('/', userRoutes); // user login and authentication routes // maybe I can put this on the main route otherwise /user
   app.use('/public', staticDir('public'));
   
