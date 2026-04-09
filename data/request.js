@@ -3,6 +3,7 @@ import { user } from '../config/mongoCollections.js';
 import { ObjectId } from 'mongodb';
 import { validateIdField } from '../helpers.js';
 import { createLocationFromRequest } from './location.js';
+import { getUserById } from "./user.js";
 
 const normalizeUserIdString = (userId) => {
   if (userId && typeof userId === 'object' && typeof userId.toString === 'function') return userId.toString();
@@ -11,7 +12,10 @@ const normalizeUserIdString = (userId) => {
 
 export const getWaitingRequestsForAdmin = async () => {
   const requestCollection = await locationRequest();
-  return requestCollection.find({ status: 'waiting' }).sort({ dateTimeCreated: -1 }).toArray();
+  return requestCollection.find({ status: 'waiting' }).map(async (reqEntry) => {
+    reqEntry["username"] = (await getUserById(reqEntry["userId"].toString()))["username"]; // Give the front end usernames to render
+    return reqEntry;
+  }).sort({ dateTimeCreated: -1 }).toArray();
 };
 
 export const createBasketballLocationRequest = async(requestObj, userId) => {
