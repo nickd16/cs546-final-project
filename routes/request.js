@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
-import { acceptLocationRequest, getWaitingRequestsForAdmin, rejectLocationRequest } from '../data/request.js';
+import { acceptLocationRequest, createLocationRequest, getWaitingRequestsForAdmin, rejectLocationRequest } from '../data/request.js';
 
 const router = Router();
 
@@ -48,6 +48,24 @@ router.post('/:requestId/accept', authRedirectMW, requireAdminPage, async (req, 
     if (e && e.message) msg = String(e.message);
     return res.redirect(303, '/request?error=' + encodeURIComponent(msg));
   }
+});
+
+router.post('/post', authRedirectMW, async (req, res) => {
+    console.log('[request router POST /] reached — posting location request');
+    try {
+        let bodyObj = req.body;
+        console.log(bodyObj);
+        if (bodyObj.categoryFilter == 'unselected') throw new Error("Incomplete Request: Must Select a Valid Location Category!")
+        
+        /** Submit request */
+        await createLocationRequest(bodyObj, userIdFromSession(req));
+        
+        return res.redirect(303, '/request');
+    } catch (e) {
+        let msg = String(e);
+        if (e && e.message) msg = String(e.message);
+        return res.redirect(303, '/request?error=' + encodeURIComponent(msg));
+    }
 });
 
 

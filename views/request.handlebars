@@ -1,7 +1,7 @@
 <div>
     <h1>Requests</h1>
 
-    {{#if isAdmin}} 
+    {{#if isAdmin}}
     {{!-- admin access --}}
     {{#if error}}
     <p class="error">{{error}}</p>
@@ -26,7 +26,7 @@
             <form action="/request/{{this._id}}/reject" method="post">
                 <button type="submit">Reject</button>
             </form>
-            
+
             <hr>
         </li>
         {{/each}}
@@ -39,6 +39,87 @@
     {{!-- user access --}}
     <h2>Create Location Request</h2>
 
-    {{!-- TODO add form --}}
+    <form action="/request/post" method="post" id="requestForm">
+
+        <label for="categoryFilter">Please choose a location category: </label>
+        <select name="categoryFilter" id="requestCategory">
+            <option value="unselected"> <-- Please choose an option --> </option>
+            <option value="tennis">Tennis</option>
+            <option value="basketball">Basketball</option>
+            <option value="handball">Handball</option>
+            <option value="hiking">Hiking</option>
+        </select>
+        <br>
+
+        <label for="locationName">Enter the Location Name: </label>
+        <input required type="text" name="locationName" id="locationName">
+        <br>
+
+        <label for="description">Enter a description for the Location: </label>
+        <input type="text" name="description" id="descriptionText">
+        <br>
+
+        <label for="body">Describe the reasoning for adding the Location: </label>
+        <input type="text" name="body" id="body">
+        <br>
+
+        <label for="address">Enter the address: </label>
+        <input type="text" name="address" id="addressText">
+        <br>
+
+        <label for="latitude">Enter the latitude: </label>
+        <input required type="number" id="latitude" name="latitude" step="any" inputmode="decimal" placeholder="0.00">
+        <br>
+
+
+        <label for="longitude">Enter the longitude: </label>
+        <input required type="number" id="longitude" name="longitude" step="any" inputmode="decimal" placeholder="0.00">
+        <br>
+
+        {{!-- Hide for handball option --}}
+        <div class="basketball tennis hiking">
+            <input type="checkbox" id="accessible" name="accessible">
+            <label for="accessible">Accessible? </label>
+        </div>
+
+        {{!-- Hide for hiking option --}}
+        <div class="basketball tennis handball">
+            <label for="numCourts">Number of Courts: </label>
+            <input type="number" id="numCourts" name="numCourts">
+        </div>
+
+        {{!-- Hide for basketball hiking handball --}}
+        <div class="tennis">
+            <label for="indoor">Indoor </label>
+            <input type="radio" name="indoorOutdoor" id="indoor" value="indoor">
+            <br>
+            <label for="outdoor">Outdoor</label>
+            <input type="radio" name="indoorOutdoor" id="outdoor" value="outdoor">
+            <br>
+            <label for="tennisType">Tennis Type: </label>
+            <input type="text" id="tennisType" name="tennisType">
+        </div>
+
+        {{!-- Hide for baseketball tennis handball --}}
+        <div class="hiking">
+            <label for="length">Length: </label>
+            <input type="text" id="length" name="length">
+            <br>
+            <label for="difficulty">Difficulty: </label>
+            <input type="text" id="difficulty" name="difficulty">
+            <br>
+            <label for="otherDetails">Other Details: </label>
+            <input type="text" id="otherDetails" name="otherDetails">
+            <br>
+            <label for="limitedAccess">Does Trail Have Limitied Access: </label>
+            <input type="text" id="limitedAccess" , name="limitedAccess">
+        </div>
+
+        {{!--  hidden by default on please choose an option --}}
+        <button hidden id = "submitRequest" type = "submit">Submit Request</button>
+
+    </form>
     {{/if}}
+
+    <script src="/public/js/requestHandler.js"></script>
 </div>

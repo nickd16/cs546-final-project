@@ -14,12 +14,76 @@ export const getWaitingRequestsForAdmin = async () => {
   return requestCollection.find({ status: 'waiting' }).sort({ dateTimeCreated: -1 }).toArray();
 };
 
-export const createLocationRequest = async(reporterUserId) => {
-    /** TODO */
+export const createBasketballLocationRequest = async(requestObj, userId) => {
+    /** Helper function to specifically create basketball request */
+
+    let cleanLat = parseFloat(requestObj.latitude);
+    let cleanLong = parseFloat(requestObj.longitude);
+
+    if (isNaN(cleanLat) || isNaN(cleanLong)) throw new Error('Invalid Latitude or Longitude Value');
+
+    let isAccessible = false;
+    if (Object.hasOwn(requestObj, "accessible")) isAccessible = true;
+
+    let numCourts = null;
+    if (requestObj.numCourts != "") {
+        numCourts = Number(requestObj.numCourts);
+        if (isNaN(numCourts)) throw new Error('Invalid number of courts');
+
+        if (numCourts < 0) throw new Error("Number of courts can not be negative");
+    }
+
+    let basketballReq = {
+        dateTimeCreated: new Date(),
+        dateTimeAcceptedRejected: null,
+        status: "waiting",
+        locationType: "basketball",
+        userId: new ObjectId(userId),
+        body: requestObj.body,
+        locationName: requestObj.locationName,
+        description: requestObj.description,
+        address: requestObj.address,
+        latitude: cleanLat,
+        longitude: cleanLong,
+        accessible: isAccessible,
+        numCourts: numCourts,
+        indoorOutdoor: null,
+        tennisType: null,
+        length: null,
+        difficulty: null,
+        otherDetails: null,
+        limitedAccess: null
+    }
+
+    let requestCollection = await locationRequest();
+
+    await requestCollection.insertOne(basketballReq);
+    return true;
+}
+
+export const createLocationRequest = async(requestObj, reporterUserId) => {
+
+    const userIdStr = normalizeUserIdString(reporterUserId);
+    await validateIdField(userIdStr);
 
     /** create location request from user */
 
-    return;
+    switch (requestObj.categoryFilter) {
+        case "basketball":
+            createBasketballLocationRequest(requestObj, userIdStr);
+            break;
+        case "tennis":
+            break;
+        case "handball":
+            break;
+        case "hiking":
+            break
+
+        default:
+            throw new Error("Invalid Category!");
+    }
+
+    return true;
 }
 
 export const acceptLocationRequest = async(requestId, adminUserId) => {
