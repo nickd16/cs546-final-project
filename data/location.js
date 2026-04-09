@@ -132,3 +132,43 @@ export const createLocation = async (name) => {
   if (typeof name !== 'string' || !name.trim()) throw new Error('Location name is required');
   return null;
 };
+
+/** Used in request.js */
+export const createLocationFromRequest = async (locationRequest) => {
+  /** admin access verified by this point of calling
+   */
+
+  let locationCollection = await location();
+  let locationObj = {
+    // _id: mongodb automatically generates unique new object id
+    dateTimeCreated: new Date(),
+    locationType: locationRequest.locationType,
+    commentList: [],
+    statusUpdateList: [],
+    ratingList: [],
+    timeSlotList: [],
+    locationName: locationRequest.locationName,
+    description: locationRequest.description,
+    address: locationRequest.address,
+    latitude: locationRequest.latitude,
+    longitude: locationRequest.longitude,
+    accessible: locationRequest.accessible,
+    numCourts: locationRequest.numCourts,
+    indoorOutdoor: locationRequest.indoorOutdoor,
+    tennisType: locationRequest.tennisType,
+    length: locationRequest.length,
+    difficulty: locationRequest.difficulty,
+    otherDetails: locationRequest.otherDetails,
+    limitedAccess: locationRequest.limitedAccess
+  };
+
+  const result = await locationCollection.insertOne(locationObj);
+
+  if (!result) {
+    // unable to add item
+    throw new Error("Error creating location from request");
+  }
+
+  return true;
+
+}

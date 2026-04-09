@@ -19,6 +19,10 @@
             <p><strong>Created:</strong> {{this.dateTimeCreated}}</p>
             <pre>{{this.body}}</pre>
 
+            <form action="/request/{{this._id}}/accept" method="post">
+                <button type="submit">Accept</button>
+            </form>
+
             <form action="/request/{{this._id}}/reject" method="post">
                 <button type="submit">Reject</button>
             </form>

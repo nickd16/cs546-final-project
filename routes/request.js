@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
-import { getWaitingRequestsForAdmin, rejectLocationRequest } from '../data/request.js';
+import { acceptLocationRequest, getWaitingRequestsForAdmin, rejectLocationRequest } from '../data/request.js';
 
 const router = Router();
 
@@ -31,6 +31,17 @@ router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
 router.post('/:requestId/reject', authRedirectMW, requireAdminPage, async (req, res) => {
   try {
     await rejectLocationRequest(req.params.requestId, userIdFromSession(req));
+    return res.redirect(303, '/request');
+  } catch (e) {
+    let msg = String(e);
+    if (e && e.message) msg = String(e.message);
+    return res.redirect(303, '/request?error=' + encodeURIComponent(msg));
+  }
+});
+
+router.post('/:requestId/accept', authRedirectMW, requireAdminPage, async (req, res) => {
+  try {
+    await acceptLocationRequest(req.params.requestId, userIdFromSession(req));
     return res.redirect(303, '/request');
   } catch (e) {
     let msg = String(e);
