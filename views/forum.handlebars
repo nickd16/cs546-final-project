@@ -61,6 +61,14 @@
                 <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
                 {{/if}}
             </p>
+            <p>Comments:</p>
+
+            <div class="commentTree">
+                {{#each commentTree}}
+                    {{> comment}}
+                {{/each}}
+            <div>
+
             <hr>
         </li>
         {{/each}}

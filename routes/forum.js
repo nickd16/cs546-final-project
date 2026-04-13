@@ -35,7 +35,7 @@ router.get('/', authRedirectMW, async (req, res) => {
     const currentUserId = userIdFromSession(req);
     let onlyUserId = '';
     if (mine) onlyUserId = currentUserId;
-    const posts = await getAllPostsForDisplay(catagoryFilter, qText, currentUserId, onlyUserId);
+    const posts = await getAllPostsForDisplay(catagoryFilter, qText, currentUserId, onlyUserId); // Change this for comment rendering
     let error = null;
     if (req.query.error) error = String(req.query.error);
     res.render('forum', { layout: 'main.handlebars', posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });

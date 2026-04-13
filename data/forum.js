@@ -1,6 +1,7 @@
 import { forum, user as userCollectionFn } from '../config/mongoCollections.js';
 import { ObjectId } from 'mongodb';
 import { validateIdField } from '../helpers.js';
+import { getUserById } from './user.js';
 
 const FORUM_CATEGORIES = ['all', 'tennis', 'basketball', 'handball', 'hiking'];
 
@@ -38,6 +39,25 @@ export const getPostById = async (id) => {
 export const getAllPosts = async () => {
   const forumCollection = await forum();
   return forumCollection.find({}).sort({ dateTimeCreated: -1 }).toArray();
+};
+
+const getChildComments = async (processedCommentList, pId) => {
+  let childCommentList = [];
+  for (let processedComment of processedCommentList) {
+    if (processedComment["parentId"] != null && processedComment["parentId"].toString() == pId.toString()) {
+      processedComment["childrenCommentList"] = await getChildComments(processedCommentList, processedComment["_id"]);
+      childCommentList.push(processedComment);
+    }
+  }
+  return childCommentList;
+};
+const getCommentTree = async (processedCommentList, pId) => {
+  let commentTree = processedCommentList.filter((comment) => pId == null || comment["parentId"] == null ? comment["parentId"] == pId : comment["parentId"].toString() == pId.toString());
+
+  for (let comment of commentTree) {
+    comment["childrenCommentList"] = await getChildComments(processedCommentList, comment["_id"]);
+  }
+  return commentTree;
 };
 
 export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, onlyUserId) => {
@@ -129,6 +149,27 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       isMine = p.userId.toString() === currentUserIdStr;
     }
 
+    // Comment Tree Assembling
+    
+    let processedCommentList = p.commentList;
+    for (let comment of processedCommentList) {
+      const userOb = await getUserById(comment["userId"].toString());
+      comment["isMine"] = comment["userId"].toString() == p.userId.toString();
+      comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
+      comment["likeCount"] = comment["likedUserIdList"].length;
+      comment["dislikeCount"] = comment["dislikedUserIdList"].length;
+      comment["_idStr"] = comment["_id"].toString();
+      comment["_postIdStr"] = key;
+    }
+    // console.log(processedCommentList); // TODO REMOVE
+    
+
+    // childrenCommentList
+    let commentTree = await getCommentTree(processedCommentList, null);
+
+    // console.log(commentTree);
+    // console.log(JSON.stringify(commentTree, null, 2));
+
     out.push({
       _idStr: p._id.toString(),
       catagory: p.catagory,
@@ -143,6 +184,7 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       dislikeCount: disliked.length,
       isDeleted: Boolean(p.isDeleted),
       isMine,
+      commentTree: commentTree
     });
   }
   return out;

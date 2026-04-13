@@ -36,3 +36,8 @@
     width: 100%;
     margin-bottom: 16px;
 }
+
+.commentTree {
+    position: relative;
+    left: 1%;
+}

@@ -1,6 +1,8 @@
 //here is where you'll set up your server as shown in lecture code.
 import express from 'express';
-import { engine } from 'express-handlebars';
+// import { engine } from 'express-handlebars';
+// import { registerPartials } from 'express-handlebars';
+import { create } from "express-handlebars";
 import session from 'express-session';
 import jwt from 'jsonwebtoken';
 const app = express();
@@ -61,8 +63,16 @@ app.use((req, res, next) => {
   }
   next();
 });
+// registerPartials()
 
-app.engine('handlebars', engine());
+// helpers,
+// "shared/templates/",
+const hbs = create({
+	partialsDir: [
+		"views/partials/",
+	],
+});
+app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
 app.set('views', './views');
 

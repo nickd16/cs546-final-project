@@ -1,0 +1,36 @@
+<div>
+    <p>{{authorUsername}}</p>
+    <p>{{body}}</p>
+    {{#if isDeleted}}
+    <button type="button" disabled>Like ({{likeCount}})</button>
+    <button type="button" disabled>Dislike ({{dislikeCount}})</button>
+    {{else}}
+    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}" method="post">
+        <button type="submit">Like ({{likeCount}})</button>
+    </form>
+    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}" method="post">
+        <button type="submit">Dislike ({{dislikeCount}})</button>
+    </form>
+    {{/if}}
+    {{#if isMine}}
+    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}/delete" method="post">
+        <button type="submit">Delete</button>
+    </form>
+    {{/if}}
+    {{#if isDeleted}}
+    <button type="button" disabled>Report</button>
+    {{else}}
+    <button type="button" class="forumCommentReportOpen" data-postid="{{_postIdStr}}" data-commentid="{{_idStr}}">Report</button>
+    {{/if}}
+    {{#if isDeleted}}
+    <button type="button" disabled>Reply</button>
+    {{else}}
+    <button type="button" class="forumReplyOpen" data-postid="{{_postIdStr}}" data-commentid="{{_idStr}}">Reply</button>
+    {{/if}}
+    {{!-- Comment Layer Deeper --}}
+    <div class="commentTree"> 
+        {{#each childrenCommentList}}
+            {{> comment}}
+        {{/each}}
+    </div>
+</div>
