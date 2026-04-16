@@ -5,7 +5,7 @@ import {user} from '../config/mongoCollections.js';
 import {ObjectId} from 'mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authRedirectMW, authMW } from './middleware.js';
+import { authReverseRedirectMW, authRedirectMW, authMW } from './middleware.js';
 
 import { body, check, param, validationResult } from 'express-validator'
 
@@ -26,7 +26,7 @@ router
 // GET /login
 router
   .route('/login')
-  .get(async (req, res) => {
+  .get(authReverseRedirectMW, async (req, res) => {
     //code here for GET
     res.render('login', {layout: 'LR.handlebars'});
     // res.sendFile(path.join(__dirname, '/views/login.html'));
@@ -74,7 +74,7 @@ router
 // POST /register
 router
   .route('/register')
-  .get(async (req, res) => {
+  .get(authReverseRedirectMW, async (req, res) => {
     //code here for GET
     res.render('register', {layout: 'LR.handlebars'});
     // res.sendFile(path.join(__dirname, '/views/register.html'));
@@ -181,6 +181,14 @@ router
       return res.status(400).json({"error":"Not permitted to remove ids from other users favorite locations list!"});
     }
    });
+   
+   router
+  .route('/logout')
+  .get(authRedirectMW, async (req, res) => {
+    //code here for GET
+    delete req.session.token;
+    return res.render('logout', {layout: 'LR.handlebars'});
+   })
 
 
 export default router;

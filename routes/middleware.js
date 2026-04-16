@@ -21,6 +21,27 @@ export const authRedirectMW = (req, res, next) => {
   }
 };
 
+export const authReverseRedirectMW = (req, res, next) => {
+  const token = req.session.token;// = token;
+  // const token = req.header('Authorization');
+  console.log('[authReverseRedirectMW]', req.method, req.originalUrl || req.url, 'hasToken=', Boolean(token));
+  if (!token) {
+    console.log('[authReverseRedirectMW] no session token, next()');
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    console.log('[authReverseRedirectMW] jwt ok, redirect /');
+    return res.redirect('/');
+  } catch (err) {
+    console.log('[authReverseRedirectMW] jwt verify failed', err.message, 'next()');
+    return next();
+    // res.status(400).json({ message: 'Invalid token' });
+  }
+};
+
 export const authMW = (req, res, next) => {
   const token = req.session.token;
   // const token = req.header('Authorization');
