@@ -50,6 +50,9 @@ export const validateUsernameField = async (username) => { // We can keep these 
     if (!validator.isAlphanumeric(trimmedUsername)) {
         throw Error("Username is not alphanumerical!");
     }
+    if (!(trimmedUsername.length <= 32)) { // Usernames must be less or equal to 32 characters
+        throw Error("Username is greater then 32 characters!");
+    }
     return trimmedUsername;
 };
 

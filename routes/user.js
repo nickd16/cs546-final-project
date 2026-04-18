@@ -19,7 +19,6 @@ router
   .get(authRedirectMW, async (req, res) => {
     // code here for GET
     res.render('index');
-    // res.sendFile(path.join(__dirname, '/views/index.html'));
    });
 
 // Give the login page in html
@@ -29,14 +28,13 @@ router
   .get(authReverseRedirectMW, async (req, res) => {
     //code here for GET
     res.render('login', {layout: 'LR.handlebars'});
-    // res.sendFile(path.join(__dirname, '/views/login.html'));
    })
   .post([
     body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
       value = await validateUsernameField(value);
       const username = await usernameExists(value);
       if (!username) {
-          throw Error("No username found!");
+          throw Error("Invalid credentials!");
       }
     }),
     body('password').notEmpty().withMessage("Enter a not empty password").custom(async value => {
@@ -45,27 +43,24 @@ router
   ],
   async (req, res) => {
     const errors = validationResult(req); // This will check for the username and password validation errors
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) return res.status(400).render('login', {layout: 'LR.handlebars', error: 'Error registering user: ' + errors.array()[0]['msg'] });
 
     const { username, password } = req.body;
     
     try {
       await passwordMatchesHash(username, password);
     } catch (err) {
-      return res.status(400).json({ error: err.message });
+      return res.status(400).render('login', {layout: 'LR.handlebars', error: 'Error logging in: ' + err.message});
     }
 
     // login and get token
     try {
       const token = await getLoginToken(username, password);
 
-      // res.status(200).json({ token, message: 'Logged in successfully' });
-      // res.send(token);
-      // console.log(token);
       req.session.token = token; // Using sessions
       return res.redirect('/');
     } catch (err) {
-      return res.status(500).json({ message: 'Error logging in', error: err.message });
+      return res.status(500).render('login', {layout: 'LR.handlebars', error: 'Error logging in: ' + err.message});
     }
   });
 
@@ -77,7 +72,6 @@ router
   .get(authReverseRedirectMW, async (req, res) => {
     //code here for GET
     res.render('register', {layout: 'LR.handlebars'});
-    // res.sendFile(path.join(__dirname, '/views/register.html'));
    }) 
   .post([
     body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
@@ -91,16 +85,19 @@ router
     //code here for POST
     // validation
     const errors = validationResult(req); // This will check for the username and password validation errors
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
+    if (!errors.isEmpty()) {
+      return res.status(400).render('register', {layout: 'LR.handlebars', error: 'Error registering user: ' + errors.array()[0]['msg'] });
+    }
     const { username, password } = req.body; // Need to ensure username and password exist
 
     try {
       const user = await registerUser(username, password);
 
-      res.status(201).json({ message: 'User registered successfully' });
+      // res.status(201).json({ message: 'User registered successfully' });
+      res.status(201).render('register', {layout: 'LR.handlebars', success: 'User registered successfully! Now go to login to login.'});
     } catch (err) {
-      res.status(500).json({ message: 'Error registering user', error: err.message });
+      // res.status(500).json({ message: 'Error registering user', error: err.message });
+      res.status(500).render('register', {layout: 'LR.handlebars', error: 'Error registering user: ' + err.message});
     }
    });
   
@@ -110,7 +107,7 @@ router
   ], async (req, res) => {
     // code here for GET
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0]['msg'] });
     
     let userId = req.params.userId;
 
@@ -138,7 +135,7 @@ router
   ], async (req, res) => {
     // code here for GET
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0]['msg'] });
     
     let userId = req.params.userId;
     let locationId = req.body.locationId;
@@ -163,7 +160,7 @@ router
   ], async (req, res) => {
     // code here for GET
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0]['msg'] });
     
     let userId = req.params.userId;
     let locationId = req.body.locationId;

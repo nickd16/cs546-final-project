@@ -41,3 +41,11 @@
     position: relative;
     left: 1%;
 }
+
+.error {
+    color: red;
+}
+
+.success {
+    color: green;
+}

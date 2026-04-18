@@ -33,10 +33,10 @@ export const getLoginToken = async (
   password = await validatePasswordField(password);
   
   const userExist = await usernameExists(username);
-  if (!userExist) throw Error("Invalid credentials");
+  if (!userExist) throw Error("Invalid credentials!");
 
   const isMatch = await passwordMatchesHash(username, password);
-  if (!isMatch) throw Error("Invalid credentials");
+  if (!isMatch) throw Error("Invalid credentials!");
 
   // find user document
   const user1 = await getUserByUsername(username);
