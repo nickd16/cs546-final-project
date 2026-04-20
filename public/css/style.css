@@ -248,8 +248,8 @@ main > * > section {
 }
 
 .commentTree {
-    position: relative;
-    left: 0.5rem;
+    position: relative !important;
+    left: 2rem !important;
 }
 
 .error {
