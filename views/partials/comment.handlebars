@@ -5,10 +5,10 @@
     <button type="button" disabled>Like ({{likeCount}})</button>
     <button type="button" disabled>Dislike ({{dislikeCount}})</button>
     {{else}}
-    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}" method="post">
+    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}/like" method="post">
         <button type="submit">Like ({{likeCount}})</button>
     </form>
-    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}" method="post">
+    <form action="/forum/{{_postIdStr}}/comment/{{_idStr}}/dislike" method="post">
         <button type="submit">Dislike ({{dislikeCount}})</button>
     </form>
     {{/if}}

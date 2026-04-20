@@ -60,6 +60,25 @@ const getCommentTree = async (processedCommentList, pId) => {
   return commentTree;
 };
 
+const collectIdsFromCommentTreeNodes = (nodes) => {
+  const out = [];
+  for (const n of nodes) {
+    if (!n || !n._id) continue;
+    let oid = n._id;
+    if (!(oid instanceof ObjectId)) oid = new ObjectId(oid.toString());
+    out.push(oid);
+    const kids = n.childrenCommentList;
+    if (kids && kids.length) out.push(...collectIdsFromCommentTreeNodes(kids));
+  }
+  return out;
+};
+
+const getCommentSubtreeObjectIdsForPull = async (commentList, rootIdStr) => {
+  const rootOid = new ObjectId(rootIdStr);
+  const descendantTree = await getChildComments(commentList, rootOid);
+  return [rootOid, ...collectIdsFromCommentTreeNodes(descendantTree)];
+};
+
 export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, onlyUserId) => {
   let posts = await getAllPosts();
 
@@ -122,6 +141,7 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
   for (let i = 0; i < posts.length; i++) {
     const p = posts[i];
     const key = p.userId.toString();
+    const postIdStr = p._id.toString();
     let authorUsername = userMap[key];
     if (authorUsername === undefined || authorUsername === null) authorUsername = 'Unknown';
 
@@ -150,16 +170,20 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
     }
 
     // Comment Tree Assembling
-    
+
     let processedCommentList = p.commentList;
+    if (!processedCommentList) processedCommentList = [];
     for (let comment of processedCommentList) {
       const userOb = await getUserById(comment["userId"].toString());
-      comment["isMine"] = comment["userId"].toString() == p.userId.toString();
+      comment["isMine"] = comment["userId"].toString() === currentUserIdStr;
       comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
-      comment["likeCount"] = comment["likedUserIdList"].length;
-      comment["dislikeCount"] = comment["dislikedUserIdList"].length;
+      const likedC = emptyIfMissing(comment["likedUserIdList"]);
+      const dislikedC = emptyIfMissing(comment["dislikedUserIdList"]);
+      comment["likeCount"] = likedC.length;
+      comment["dislikeCount"] = dislikedC.length;
       comment["_idStr"] = comment["_id"].toString();
-      comment["_postIdStr"] = key;
+      comment["_postIdStr"] = postIdStr;
+      if (comment["isDeleted"] === undefined || comment["isDeleted"] === null) comment["isDeleted"] = false;
     }
     // console.log(processedCommentList); // TODO REMOVE
     
@@ -223,17 +247,17 @@ export const toggleLikePost = async (postId, userId) => {
   if (post.isDeleted) throw new Error('Cannot like a deleted post');
 
   const uid = new ObjectId(userIdStr);
-  let liked = emptyIfMissing(post.likedUserIdList).slice();
-  let disliked = emptyIfMissing(post.dislikedUserIdList).slice();
+  const liked = emptyIfMissing(post.likedUserIdList);
   const inLiked = liked.some((id) => id.equals(uid));
 
-  if (inLiked) liked = liked.filter((id) => !id.equals(uid));
-  else {
-    liked.push(uid);
-    disliked = disliked.filter((id) => !id.equals(uid));
+  if (inLiked) {
+    await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $pull: { likedUserIdList: uid } });
+  } else {
+    await forumCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $addToSet: { likedUserIdList: uid }, $pull: { dislikedUserIdList: uid } },
+    );
   }
-
-  await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $set: { likedUserIdList: liked, dislikedUserIdList: disliked } });
   return getPostById(postId);
 };
 
@@ -248,18 +272,186 @@ export const toggleDislikePost = async (postId, userId) => {
   if (post.isDeleted) throw new Error('Cannot dislike a deleted post');
 
   const uid = new ObjectId(userIdStr);
-  let liked = emptyIfMissing(post.likedUserIdList).slice();
-  let disliked = emptyIfMissing(post.dislikedUserIdList).slice();
+  const disliked = emptyIfMissing(post.dislikedUserIdList);
   const inDisliked = disliked.some((id) => id.equals(uid));
 
-  if (inDisliked) disliked = disliked.filter((id) => !id.equals(uid));
-  else {
-    disliked.push(uid);
-    liked = liked.filter((id) => !id.equals(uid));
+  if (inDisliked) {
+    await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $pull: { dislikedUserIdList: uid } });
+  } else {
+    await forumCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $addToSet: { dislikedUserIdList: uid }, $pull: { likedUserIdList: uid } },
+    );
+  }
+  return getPostById(postId);
+};
+
+const validateCommentBody = (body) => {
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Comment body is required');
+  if (body.trim().length > 5000) throw new Error('Comment is too long');
+  return body.trim();
+};
+
+const findCommentInPost = (post, commentIdStr) => {
+  const list = emptyIfMissing(post.commentList);
+  const cid = new ObjectId(commentIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(cid)) return list[i];
+  }
+  return null;
+};
+
+export const addCommentToPost = async (postId, userId, body, parentIdStr) => {
+  postId = await validateIdField(postId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+  body = validateCommentBody(body);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
+  if (post.isDeleted) throw new Error('Cannot comment on a deleted post');
+
+  let parentId = null;
+  if (parentIdStr && String(parentIdStr).trim()) {
+    parentIdStr = await validateIdField(String(parentIdStr).trim());
+    const parent = findCommentInPost(post, parentIdStr);
+    if (!parent) throw new Error('Parent comment not found');
+    if (parent.isDeleted) throw new Error('Cannot reply to a deleted comment');
+    parentId = new ObjectId(parentIdStr);
   }
 
-  await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $set: { likedUserIdList: liked, dislikedUserIdList: disliked } });
+  const newComment = {
+    _id: new ObjectId(),
+    dateTimeCreated: new Date(),
+    userId: new ObjectId(userIdStr),
+    parentId,
+    childrenCommentIdList: [],
+    body,
+    likedUserIdList: [],
+    dislikedUserIdList: [],
+    isDeleted: false,
+  };
+
+  await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $push: { commentList: newComment } });
   return getPostById(postId);
+};
+
+export const toggleLikeComment = async (postId, commentId, userId) => {
+  postId = await validateIdField(postId);
+  commentId = await validateIdField(commentId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
+  if (post.isDeleted) throw new Error('Cannot like on a deleted post');
+
+  const c = findCommentInPost(post, commentId);
+  if (!c) throw new Error('Comment not found');
+  if (c.isDeleted) throw new Error('Cannot like a deleted comment');
+
+  const uid = new ObjectId(userIdStr);
+  const commentOid = new ObjectId(commentId);
+  const liked = emptyIfMissing(c.likedUserIdList);
+  const inLiked = liked.some((id) => id.equals(uid));
+
+  if (inLiked) {
+    await forumCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $pull: { 'commentList.$[c].likedUserIdList': uid } },
+      { arrayFilters: [{ 'c._id': commentOid }] },
+    );
+  } else {
+    await forumCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $addToSet: { 'commentList.$[c].likedUserIdList': uid }, $pull: { 'commentList.$[c].dislikedUserIdList': uid } },
+      { arrayFilters: [{ 'c._id': commentOid }] },
+    );
+  }
+  return getPostById(postId);
+};
+
+export const toggleDislikeComment = async (postId, commentId, userId) => {
+  postId = await validateIdField(postId);
+  commentId = await validateIdField(commentId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
+  if (post.isDeleted) throw new Error('Cannot dislike on a deleted post');
+
+  const c = findCommentInPost(post, commentId);
+  if (!c) throw new Error('Comment not found');
+  if (c.isDeleted) throw new Error('Cannot dislike a deleted comment');
+
+  const uid = new ObjectId(userIdStr);
+  const commentOid = new ObjectId(commentId);
+  const disliked = emptyIfMissing(c.dislikedUserIdList);
+  const inDisliked = disliked.some((id) => id.equals(uid));
+
+  if (inDisliked) {
+    await forumCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $pull: { 'commentList.$[c].dislikedUserIdList': uid } },
+      { arrayFilters: [{ 'c._id': commentOid }] },
+    );
+  } else {
+    await forumCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $addToSet: { 'commentList.$[c].dislikedUserIdList': uid }, $pull: { 'commentList.$[c].likedUserIdList': uid } },
+      { arrayFilters: [{ 'c._id': commentOid }] },
+    );
+  }
+  return getPostById(postId);
+};
+
+export const deleteCommentByUser = async (postId, commentId, userId) => {
+  postId = await validateIdField(postId);
+  commentId = await validateIdField(commentId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
+
+  const c = findCommentInPost(post, commentId);
+  if (!c) throw new Error('Comment not found');
+  if (!c.userId || c.userId.toString() !== userIdStr) throw new Error('You can only delete your own comment');
+
+  const list = post.commentList || [];
+  const objectIdsToPull = await getCommentSubtreeObjectIdsForPull(list, commentId);
+
+  await forumCollection.updateOne(
+    { _id: new ObjectId(postId) },
+    { $pull: { commentList: { _id: { $in: objectIdsToPull } } } },
+  );
+  return true;
+};
+
+export const removeCommentSubtreeFromPost = async (postId, commentId) => {
+  postId = await validateIdField(postId);
+  commentId = await validateIdField(commentId);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
+
+  const c = findCommentInPost(post, commentId);
+  if (!c) throw new Error('Comment not found');
+
+  const list = post.commentList || [];
+  const objectIdsToPull = await getCommentSubtreeObjectIdsForPull(list, commentId);
+
+  await forumCollection.updateOne(
+    { _id: new ObjectId(postId) },
+    { $pull: { commentList: { _id: { $in: objectIdsToPull } } } },
+  );
+  return true;
 };
 
 export const deletePostByUser = async (postId, userId) => {
@@ -273,10 +465,8 @@ export const deletePostByUser = async (postId, userId) => {
 
   if (!post.userId || post.userId.toString() !== userIdStr) throw new Error('You can only delete your own post');
 
-  await forumCollection.updateOne(
-    { _id: new ObjectId(postId) },
-    { $set: { isDeleted: true, deletedAt: new Date(), deletedByUserId: new ObjectId(userIdStr), title: 'Post deleted by user', body: 'Post deleted by user' } },
-  );
+  const del = await forumCollection.deleteOne({ _id: new ObjectId(postId), userId: new ObjectId(userIdStr) });
+  if (del.deletedCount === 0) throw new Error('Post not found');
   return true;
 };
 

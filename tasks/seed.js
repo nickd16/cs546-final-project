@@ -126,7 +126,7 @@ const main = async () => {
             "contentId": new ObjectId('62b7c2f8f135c5b2f8e4b1a1'),
             "locationOrForumId": new ObjectId('62b7c2f8f135c5b2f8e4b1a1'),
             "reportReason": "spam",
-            "body": "This is a report!"
+            "body": "Sample report description text."
         },
     ];
 

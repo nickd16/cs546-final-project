@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
-import { getWaitingReportsForAdmin, acceptForumPostReportAndDeletePost, rejectReport } from '../data/report.js';
+import { getWaitingReportsForAdmin, acceptReport, rejectReport } from '../data/report.js';
 
 const router = Router();
 
@@ -18,6 +18,8 @@ const requireAdminPage = (req, res, next) => {
 
 router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
   try {
+    let pageError = null;
+    if (req.query.error) pageError = String(req.query.error);
     const reports = await getWaitingReportsForAdmin();
     const postReports = [];
     const commentReports = [];
@@ -26,7 +28,7 @@ router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
       if (r.typeOfContent === 'post') postReports.push(r);
       else if (r.typeOfContent === 'comment') commentReports.push(r);
     }
-    res.render('report', { layout: 'main.handlebars', postReports, commentReports, error: null });
+    res.render('report', { layout: 'main.handlebars', postReports, commentReports, error: pageError });
   } catch (e) {
     let msg = String(e);
     if (e && e.message) msg = String(e.message);
@@ -36,7 +38,7 @@ router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
 
 router.post('/:reportId/accept', authRedirectMW, requireAdminPage, async (req, res) => {
   try {
-    await acceptForumPostReportAndDeletePost(req.params.reportId, userIdFromSession(req));
+    await acceptReport(req.params.reportId, userIdFromSession(req));
     return res.redirect(303, '/report');
   } catch (e) {
     let msg = String(e);

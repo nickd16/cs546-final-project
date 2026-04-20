@@ -14,11 +14,13 @@
             <p><strong>Content Id:</strong> {{this.contentId}}</p>
             <p><strong>Reported By:</strong> {{this.username}} ({{this.userId}})</p>
             <p><strong>Created:</strong> {{this.dateTimeCreated}}</p>
+            <p><strong>Reason:</strong> {{this.reportReason}}</p>
+            <p><strong>Description:</strong></p>
             <pre>{{this.body}}</pre>
-            <form action="/report/{{this._id}}/accept" method="post">
+            <form action="/report/{{this._idStr}}/accept" method="post">
                 <button type="submit">Accept and delete post</button>
             </form>
-            <form action="/report/{{this._id}}/reject" method="post">
+            <form action="/report/{{this._idStr}}/reject" method="post">
                 <button type="submit">Reject</button>
             </form>
             <hr>
@@ -38,8 +40,13 @@
             <p><strong>Content Id:</strong> {{this.contentId}}</p>
             <p><strong>Reported By:</strong> {{this.username}} ({{this.userId}})</p>
             <p><strong>Created:</strong> {{this.dateTimeCreated}}</p>
+            <p><strong>Reason:</strong> {{this.reportReason}}</p>
+            <p><strong>Description:</strong></p>
             <pre>{{this.body}}</pre>
-            <form action="/report/{{this._id}}/reject" method="post">
+            <form action="/report/{{this._idStr}}/accept" method="post">
+                <button type="submit">Accept and delete comment</button>
+            </form>
+            <form action="/report/{{this._idStr}}/reject" method="post">
                 <button type="submit">Reject</button>
             </form>
             <hr>
