@@ -62,6 +62,16 @@
                 {{/if}}
             </p>
             <p>Comments:</p>
+            {{#unless isDeleted}}
+            <form action="/forum/{{_idStr}}/comment" method="post">
+                <input type="hidden" name="parentId" value="">
+                <p>
+                    <label for="forum-new-comment-{{_idStr}}">Add a comment</label><br>
+                    <textarea id="forum-new-comment-{{_idStr}}" name="body" rows="3" maxlength="5000" required></textarea>
+                </p>
+                <p><button type="submit">Post comment</button></p>
+            </form>
+            {{/unless}}
 
             <div class="commentTree">
                 {{#each commentTree}}
@@ -101,6 +111,45 @@
             <p>
                 <button type="submit">Post</button>
                 <button type="button" id="forumNewPostCancel">Cancel</button>
+            </p>
+        </form>
+    </dialog>
+
+    <dialog id="forumReplyDialog">
+        <h2>Reply</h2>
+        <form id="forumReplyForm" action="/forum/POST_ID/comment" method="post">
+            <input type="hidden" name="parentId" id="forum-reply-parentid" value="">
+            <p>
+                <label for="forum-reply-body">Your reply</label><br>
+                <textarea id="forum-reply-body" name="body" rows="4" maxlength="5000" required></textarea>
+            </p>
+            <p>
+                <button type="submit">Reply</button>
+                <button type="button" id="forumReplyCancel">Cancel</button>
+            </p>
+        </form>
+    </dialog>
+
+    <dialog id="forumCommentReportDialog">
+        <h2>Report comment</h2>
+        <form id="forumCommentReportForm" action="/forum/POST_ID/comment/COMMENT_ID/report" method="post">
+            <p>
+                <label for="forum-comment-report-reason">Why are you reporting?</label><br>
+                <select id="forum-comment-report-reason" name="reason" required>
+                    <option value="spam">Spam</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="hate">Hate</option>
+                    <option value="violence">Violence</option>
+                    <option value="other">Other</option>
+                </select>
+            </p>
+            <p>
+                <label for="forum-comment-report-description">Description</label><br>
+                <textarea id="forum-comment-report-description" name="description" rows="4" maxlength="2000"></textarea>
+            </p>
+            <p>
+                <button type="submit">Submit report</button>
+                <button type="button" id="forumCommentReportCancel">Cancel</button>
             </p>
         </form>
     </dialog>
@@ -153,6 +202,40 @@
       }
       if (reportCancel && reportDlg && reportDlg.close) reportCancel.addEventListener('click', function () { reportDlg.close(); });
       else if (reportCancel && reportDlg) reportCancel.addEventListener('click', function () { reportDlg.removeAttribute('open'); });
+
+      var replyDlg = document.getElementById('forumReplyDialog');
+      var replyForm = document.getElementById('forumReplyForm');
+      var replyParentInput = document.getElementById('forum-reply-parentid');
+      var replyCancel = document.getElementById('forumReplyCancel');
+      var replyButtons = document.getElementsByClassName('forumReplyOpen');
+      for (var r = 0; r < replyButtons.length; r++) {
+        replyButtons[r].addEventListener('click', function () {
+          var pid = this.getAttribute('data-postid');
+          var cid = this.getAttribute('data-commentid');
+          if (replyForm && pid) replyForm.setAttribute('action', '/forum/' + pid + '/comment');
+          if (replyParentInput && cid) replyParentInput.value = cid;
+          if (replyDlg && replyDlg.showModal) replyDlg.showModal();
+          else if (replyDlg) replyDlg.setAttribute('open', '');
+        });
+      }
+      if (replyCancel && replyDlg && replyDlg.close) replyCancel.addEventListener('click', function () { replyDlg.close(); });
+      else if (replyCancel && replyDlg) replyCancel.addEventListener('click', function () { replyDlg.removeAttribute('open'); });
+
+      var commentReportDlg = document.getElementById('forumCommentReportDialog');
+      var commentReportForm = document.getElementById('forumCommentReportForm');
+      var commentReportCancel = document.getElementById('forumCommentReportCancel');
+      var commentReportButtons = document.getElementsByClassName('forumCommentReportOpen');
+      for (var c = 0; c < commentReportButtons.length; c++) {
+        commentReportButtons[c].addEventListener('click', function () {
+          var pid = this.getAttribute('data-postid');
+          var cid = this.getAttribute('data-commentid');
+          if (commentReportForm && pid && cid) commentReportForm.setAttribute('action', '/forum/' + pid + '/comment/' + cid + '/report');
+          if (commentReportDlg && commentReportDlg.showModal) commentReportDlg.showModal();
+          else if (commentReportDlg) commentReportDlg.setAttribute('open', '');
+        });
+      }
+      if (commentReportCancel && commentReportDlg && commentReportDlg.close) commentReportCancel.addEventListener('click', function () { commentReportDlg.close(); });
+      else if (commentReportCancel && commentReportDlg) commentReportCancel.addEventListener('click', function () { commentReportDlg.removeAttribute('open'); });
     })();
     </script>
 </div>

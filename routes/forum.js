@@ -1,7 +1,17 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
-import { getAllPostsForDisplay, createPost, toggleLikePost, toggleDislikePost, deletePostByUser } from '../data/forum.js';
-import { createForumPostReport } from '../data/report.js';
+import {
+  getAllPostsForDisplay,
+  createPost,
+  toggleLikePost,
+  toggleDislikePost,
+  deletePostByUser,
+  addCommentToPost,
+  toggleLikeComment,
+  toggleDislikeComment,
+  deleteCommentByUser,
+} from '../data/forum.js';
+import { createForumPostReport, createForumCommentReport } from '../data/report.js';
 
 const router = Router();
 
@@ -41,6 +51,55 @@ router.get('/', authRedirectMW, async (req, res) => {
     res.render('forum', { layout: 'main.handlebars', posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
   } catch (e) {
     res.status(500).render('forum', { layout: 'main.handlebars', posts: [], error: errorTextFromCatch(e, 'Could not load forum'), catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
+  }
+});
+
+router.post('/:postId/comment/:commentId/like', authRedirectMW, async (req, res) => {
+  try {
+    await toggleLikeComment(req.params.postId, req.params.commentId, userIdFromSession(req));
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not update like')));
+  }
+});
+
+router.post('/:postId/comment/:commentId/dislike', authRedirectMW, async (req, res) => {
+  try {
+    await toggleDislikeComment(req.params.postId, req.params.commentId, userIdFromSession(req));
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not update dislike')));
+  }
+});
+
+router.post('/:postId/comment/:commentId/delete', authRedirectMW, async (req, res) => {
+  try {
+    await deleteCommentByUser(req.params.postId, req.params.commentId, userIdFromSession(req));
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not delete comment')));
+  }
+});
+
+router.post('/:postId/comment/:commentId/report', authRedirectMW, async (req, res) => {
+  try {
+    const { reason, description } = req.body;
+    await createForumCommentReport(userIdFromSession(req), req.params.postId, req.params.commentId, reason, description);
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not submit report')));
+  }
+});
+
+router.post('/:postId/comment', authRedirectMW, async (req, res) => {
+  try {
+    let parentId = '';
+    if (req.body.parentId) parentId = String(req.body.parentId).trim();
+    const body = req.body.body;
+    await addCommentToPost(req.params.postId, userIdFromSession(req), body, parentId);
+    return res.redirect(303, '/forum');
+  } catch (e) {
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not add comment')));
   }
 });
 
