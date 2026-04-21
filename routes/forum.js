@@ -1,16 +1,6 @@
 import { Router } from 'express';
 import { authRedirectMW } from './middleware.js';
-import {
-  getAllPostsForDisplay,
-  createPost,
-  toggleLikePost,
-  toggleDislikePost,
-  deletePostByUser,
-  addCommentToPost,
-  toggleLikeComment,
-  toggleDislikeComment,
-  deleteCommentByUser,
-} from '../data/forum.js';
+import {getAllPostsForDisplay, createPost, toggleLikePost, toggleDislikePost, deletePostByUser, addCommentToPost, toggleLikeComment, toggleDislikeComment, deleteCommentByUser, removeCommentSubtreeFromPost} from '../data/forum.js';
 import { createForumPostReport, createForumCommentReport } from '../data/report.js';
 
 const router = Router();
