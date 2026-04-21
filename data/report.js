@@ -106,6 +106,7 @@ export const createForumCommentReport = async (reporterUserId, postId, commentId
 
 export const getWaitingReportsForAdmin = async () => {
   const reportCollection = await report();
+  const forumCollection = await forum();
   const rows = await reportCollection.find({ status: 'waiting' }).sort({ dateTimeCreated: -1 }).toArray();
   for (let i = 0; i < rows.length; i++) {
     rows[i]._idStr = rows[i]._id.toString();
@@ -115,6 +116,30 @@ export const getWaitingReportsForAdmin = async () => {
       else rows[i].username = 'Unknown';
     } catch (err) {
       rows[i].username = 'Unknown';
+    }
+
+    rows[i].reportedContentText = 'Reported content no longer available';
+    try {
+      if (rows[i].typeOfContent === 'post' && rows[i].contentId) {
+        const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].contentId.toString()) });
+        if (post) {
+          const titleText = typeof post.title === 'string' ? post.title.trim() : '';
+          const bodyText = typeof post.body === 'string' ? post.body.trim() : '';
+          if (titleText && bodyText) rows[i].reportedContentText = titleText + '\n\n' + bodyText;
+          else if (titleText) rows[i].reportedContentText = titleText;
+          else if (bodyText) rows[i].reportedContentText = bodyText;
+        }
+      } else if (rows[i].typeOfContent === 'comment' && rows[i].locationOrForumId && rows[i].contentId) {
+        const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
+        if (post) {
+          const comment = findCommentInPost(post, rows[i].contentId.toString());
+          if (comment && typeof comment.body === 'string' && comment.body.trim()) {
+            rows[i].reportedContentText = comment.body.trim();
+          }
+        }
+      }
+    } catch (err) {
+      rows[i].reportedContentText = 'Reported content no longer available';
     }
   }
   return rows;
