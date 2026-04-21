@@ -1,3 +1,5 @@
+<link rel="stylesheet" type="text/css" href="/public/css/location.css">
+
 <section class="locations-page">
     <h1>Locations</h1>
 
@@ -5,10 +7,146 @@
         <p class="error">{{error}}</p>
     {{/if}}
 
-    <div id="locations-map" class="locations-map"></div>
+    {{#if success}}
+        <p class="success">{{success}}</p>
+    {{/if}}
+
+    <div class="locations-top-layout">
+        <section class="locations-map-panel">
+            <div id="locations-map" class="locations-map"></div>
+        </section>
+
+        <section class="locations-sidebar">
+            <div class="locations-controls">
+                <label for="location-type-filter">Location type</label>
+                <select id="location-type-filter">
+                    <option value="all">All</option>
+                    <option value="tennis">Tennis</option>
+                    <option value="basketball">Basketball</option>
+                    <option value="handball">Handball</option>
+                    <option value="hiking">Hiking</option>
+                </select>
+
+                <label for="location-search-text">Search</label>
+                <input id="location-search-text" type="text">
+
+                <label for="location-radius-filter">Radius</label>
+                <select id="location-radius-filter">
+                    <option value="1">1 mile</option>
+                    <option value="3">3 miles</option>
+                    <option value="5" selected>5 miles</option>
+                    <option value="10">10 miles</option>
+                    <option value="20">20 miles</option>
+                </select>
+
+                <label for="location-auto-geolocate">
+                    <input id="location-auto-geolocate" type="checkbox" checked>
+                    Use my location when this page opens
+                </label>
+
+                <button id="location-use-my-location" type="button">Use my location now</button>
+            </div>
+
+            <p id="location-map-message">Allow location access or click anywhere on the map to set your current location.</p>
+
+            <div class="locations-nearby-panel">
+                <h2>Nearby Locations</h2>
+                <p id="location-nearby-summary"></p>
+                <div id="location-nearby-list"></div>
+            </div>
+        </section>
+    </div>
+
+    <section class="locations-detail-section">
+        <h2>Selected Location</h2>
+        <div id="location-detail-panel">
+            <p>Select a location from the map or the nearby list.</p>
+        </div>
+    </section>
+
+    {{#if isAdmin}}
+    <section class="locations-admin-section">
+        <h2>Create Location</h2>
+        <form action="/location/create" method="post">
+            <p>
+                <label for="create-location-type">Location type</label><br>
+                <select id="create-location-type" name="locationType" required>
+                    <option value="tennis">Tennis</option>
+                    <option value="basketball">Basketball</option>
+                    <option value="handball">Handball</option>
+                    <option value="hiking">Hiking</option>
+                </select>
+            </p>
+            <p>
+                <label for="create-location-name">Location name</label><br>
+                <input id="create-location-name" name="locationName" type="text" required>
+            </p>
+            <p>
+                <label for="create-location-description">Description</label><br>
+                <textarea id="create-location-description" name="description" rows="3"></textarea>
+            </p>
+            <p>
+                <label for="create-location-address">Address</label><br>
+                <input id="create-location-address" name="address" type="text">
+            </p>
+            <p>
+                <label for="create-location-latitude">Latitude</label><br>
+                <input id="create-location-latitude" name="latitude" type="number" step="any">
+            </p>
+            <p>
+                <label for="create-location-longitude">Longitude</label><br>
+                <input id="create-location-longitude" name="longitude" type="number" step="any">
+            </p>
+            <p>
+                <label for="create-location-accessible">Accessible</label><br>
+                <select id="create-location-accessible" name="accessible">
+                    <option value="">Unknown</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </p>
+            <p>
+                <label for="create-location-numCourts">Number of courts</label><br>
+                <input id="create-location-numCourts" name="numCourts" type="number">
+            </p>
+            <p>
+                <label for="create-location-indoorOutdoor">Indoor or outdoor</label><br>
+                <input id="create-location-indoorOutdoor" name="indoorOutdoor" type="text">
+            </p>
+            <p>
+                <label for="create-location-tennisType">Tennis type</label><br>
+                <input id="create-location-tennisType" name="tennisType" type="text">
+            </p>
+            <p>
+                <label for="create-location-length">Length</label><br>
+                <input id="create-location-length" name="length" type="text">
+            </p>
+            <p>
+                <label for="create-location-difficulty">Difficulty</label><br>
+                <input id="create-location-difficulty" name="difficulty" type="text">
+            </p>
+            <p>
+                <label for="create-location-otherDetails">Other details</label><br>
+                <input id="create-location-otherDetails" name="otherDetails" type="text">
+            </p>
+            <p>
+                <label for="create-location-limitedAccess">Limited access</label><br>
+                <input id="create-location-limitedAccess" name="limitedAccess" type="text">
+            </p>
+            <p>
+                <button type="submit">Create location</button>
+            </p>
+        </form>
+    </section>
+    {{/if}}
 </section>
 
 <script>
     window.locationMapData = {{{mapLocationsJson}}};
+    window.locationPageMeta = {
+        selectedLocationId: '{{selectedLocationId}}',
+        isAdmin: {{#if isAdmin}}true{{else}}false{{/if}},
+        userId: '{{userId}}'
+    };
 </script>
 <script src="/public/js/locationMap.js"></script>

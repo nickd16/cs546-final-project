@@ -1,51 +1,289 @@
-.navi {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: #333;
+:root {
+    --sky-top: #86c8ea;
+    --sky-bottom: #edf8ff;
+    --cloud: rgba(255, 255, 255, 0.88);
+    --green-dark: #4f7f2c;
+    --green: #6f9c42;
+    --green-light: #a9d66b;
+    --trail: #a67a52;
+    --trail-light: #c79c70;
+    --panel: rgba(250, 246, 235, 0.68);
+    --panel-line: rgba(255, 255, 255, 0.42);
+    --ink: #27371d;
+    --ink-soft: #506045;
+    --link: #2f678e;
 }
 
-.menu {
-    float: left;
+html, body {
+    margin: 0;
+    min-height: 100%;
+    color: var(--ink);
+    font-family: "Trebuchet MS", Verdana, sans-serif;
+    background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+}
+
+body {
+    position: relative;
+    overflow-x: hidden;
+}
+
+.scene, .scene:before, .scene:after, .clouds {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+.scene {
+    z-index: 0;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0) 35%),
+        linear-gradient(180deg, transparent 72%, #c9ea8d 72% 82%, #7ebd1e 82% 90%, #5f8f19 90%);
+}
+
+.scene:before {
+    content: "";
+    position: absolute;
+    inset: auto 0 12rem 0;
+    height: 12rem;
+    background:
+        radial-gradient(circle at 14% 100%, rgba(113, 158, 69, 0.55) 0 9rem, transparent 9.1rem),
+        radial-gradient(circle at 40% 100%, rgba(113, 158, 69, 0.45) 0 11rem, transparent 11.1rem),
+        radial-gradient(circle at 70% 100%, rgba(88, 127, 57, 0.45) 0 10rem, transparent 10.1rem),
+        radial-gradient(circle at 94% 100%, rgba(88, 127, 57, 0.55) 0 12rem, transparent 12.1rem);
+}
+
+.scene:after {
+    content: "";
+    position: absolute;
+    inset: 4.5rem 0 auto 0;
+    height: 5rem;
+    opacity: 0.2;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+    animation: wind 20s linear infinite;
+}
+
+.clouds {
+    z-index: 0;
+}
+
+.cloud {
+    position: absolute;
+    width: 9rem;
+    height: 3rem;
+    border-radius: 999px;
+    background: var(--cloud);
+    filter: blur(0.2px);
+    animation: drift linear infinite;
+}
+
+.cloud:before, .cloud:after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: inherit;
+}
+
+.cloud:before {
+    width: 3.6rem;
+    height: 3.6rem;
+    left: 1.2rem;
+    bottom: 1rem;
+}
+
+.cloud:after {
+    width: 4rem;
+    height: 4rem;
+    right: 1rem;
+    bottom: 0.7rem;
+}
+
+.cloud-one {
+    top: 5.5rem;
+    left: -12rem;
+    animation-duration: 46s;
+}
+
+.cloud-two {
+    top: 10.5rem;
+    left: -16rem;
+    transform: scale(0.78);
+    animation-duration: 58s;
+}
+
+header, main {
+    position: relative;
+    z-index: 1;
+}
+
+header {
+    max-width: 92rem;
+    margin: 0 auto;
+    padding: 1rem 1rem 0;
+}
+
+.navi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.95rem;
+    background: rgba(83, 129, 67, 0.92);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 1.15rem;
+    box-shadow: 0 0.6rem 1.5rem rgba(41, 66, 25, 0.14);
+}
+
+.menua, button, input, select, textarea {
+    border-radius: 0.9rem;
 }
 
 .menua {
     display: block;
-    color: white;
-    text-align: center;
-    padding: 14px 16px;
+    padding: 0.85rem 1.2rem;
+    color: #f8fff2;
     text-decoration: none;
+    font-weight: 700;
+    background: rgba(255,255,255,0.11);
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-/* Change the link color to #111 (black) on hover */
-.menua:hover {
-    background-color: #111;
+.menua:hover, .menua:focus {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
 }
 
-.error {
-    color: red;
+main {
+    max-width: 92rem;
+    margin: 1.1rem auto 2.5rem;
+    padding: 0 1rem 2rem;
 }
 
-.locations-page {
-    padding: 16px;
-}
-
-.locations-map {
-    height: 500px;
+main > * {
     width: 100%;
-    margin-bottom: 16px;
+    box-sizing: border-box;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 1.5rem;
+    box-shadow: 0 0.9rem 2.4rem rgba(42, 63, 27, 0.14);
+    backdrop-filter: blur(1rem);
+    -webkit-backdrop-filter: blur(1rem);
+    padding: 1.35rem 1.45rem;
+}
+
+h1, h2, h3, h4 {
+    margin-top: 0;
+    line-height: 1.15;
+}
+
+h1 {
+    font-size: 2.2rem;
+    margin-bottom: 1.1rem;
+}
+
+h2, h3, h4, p, li, label {
+    color: var(--ink);
+}
+
+section {
+    margin-top: 1rem;
+}
+
+form {
+    margin: 0.8rem 0 1rem;
+}
+
+ul {
+    padding-left: 1.3rem;
+}
+
+li {
+    margin-bottom: 0.7rem;
+}
+
+a {
+    color: var(--link);
+}
+
+button, input, select, textarea {
+    border: 1px solid var(--panel-line);
+    padding: 0.72rem 0.9rem;
+    background: rgba(255, 252, 244, 0.98);
+    color: var(--ink);
+    font: inherit;
+    box-sizing: border-box;
+}
+
+input, select {
+    min-height: 2.9rem;
+}
+
+textarea {
+    width: 100%;
+    max-width: 100%;
+}
+
+button {
+    border: none;
+    color: #fffaf1;
+    font-weight: 700;
+    cursor: pointer;
+    background: linear-gradient(180deg, var(--trail-light), var(--trail));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+button:hover {
+    filter: brightness(1.03);
+    transform: translateY(-1px);
+}
+
+main > * > section {
+    background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 1.1rem;
+    backdrop-filter: blur(0.45rem);
+    -webkit-backdrop-filter: blur(0.45rem);
+    padding: 1rem;
 }
 
 .commentTree {
-    position: relative;
-    left: 1%;
+    position: relative !important;
+    left: 2rem !important;
 }
 
 .error {
-    color: red;
+    color: #9f2d20;
+    font-weight: 700;
 }
 
 .success {
-    color: green;
+    color: #2d6a20;
+    font-weight: 700;
+}
+
+@media (max-width: 700px) {
+    header, main {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .menua {
+        padding: 0.75rem 1rem;
+    }
+
+    main > * {
+        padding: 1rem;
+    }
+
+}
+
+@keyframes drift {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(100vw + 24rem)); }
+}
+
+@keyframes wind {
+    from { transform: translateX(-25%); }
+    to { transform: translateX(115%); }
 }

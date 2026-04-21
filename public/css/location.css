@@ -1,0 +1,75 @@
+.locations-page {
+    padding: 1.45rem 1.5rem;
+}
+
+.locations-top-layout {
+    display: grid;
+    grid-template-columns: minmax(20rem, 1fr) minmax(18rem, 0.85fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.locations-map-panel,
+.locations-sidebar,
+.locations-detail-section,
+.locations-admin-section,
+.locations-nearby-panel {
+    margin-top: 0;
+}
+
+.locations-sidebar {
+    display: grid;
+    gap: 1rem;
+}
+
+.locations-controls {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.8rem 0.9rem;
+    align-items: center;
+}
+
+.locations-controls label[for="location-auto-geolocate"] {
+    grid-column: 1 / -1;
+}
+
+.locations-controls button {
+    justify-self: start;
+}
+
+.locations-map {
+    aspect-ratio: 1 / 1;
+    min-height: 32rem;
+    width: 100%;
+    margin: 0;
+    border-radius: 1.2rem;
+    overflow: hidden;
+    border: 1px solid rgba(113, 158, 69, 0.35);
+}
+
+#location-nearby-list {
+    max-height: 26rem;
+    overflow-y: auto;
+    padding-right: 0.4rem;
+}
+
+.locations-detail-section,
+.locations-admin-section {
+    margin-top: 1.25rem;
+}
+
+@media (max-width: 980px) {
+    .locations-top-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .locations-controls {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .locations-map {
+        min-height: 22rem;
+    }
+}
