@@ -257,6 +257,40 @@ export const getAllLocationsForDisplay = async (locationTypeFilter, q, currentUs
   return out;
 };
 
+export const getFavoriteLocations = async(userId) => {
+  userId = await validateIdField(userId);
+
+  /** Get favorite locations for a user, referencing favLocationIds */
+
+  let favoriteIdStrings = [];
+  const currentUserIdStr = normalizeUserIdString(userId);
+  if (currentUserIdStr && ObjectId.isValid(currentUserIdStr)) {
+    const userCollection = await userCollectionFn();
+    const currentUser = await userCollection.findOne({_id: new ObjectId(currentUserIdStr)});
+    if (currentUser && Array.isArray(currentUser.favLocationIds)) {
+      favoriteIdStrings = currentUser.favLocationIds.map((id) => id.toString());
+    }
+  };
+
+  /** get location details for each */
+
+  let favoriteLocationDetails = [];
+  for (let locationId of favoriteIdStrings) {
+    let locationObj = await getLocationById(locationId);
+
+    let parsedLocationObj = {
+      id: locationObj._id.toString(),
+      locationName: locationObj.locationName,
+      locationType: locationObj.locationType,
+      address: locationObj.address || locationObj.locationName,
+    }
+    favoriteLocationDetails.push(parsedLocationObj);
+  }
+
+  return favoriteLocationDetails;
+
+}
+
 export const getAllLocationsForMap = async (locationTypeFilter, q, currentUserId = '') => {
   const locations = await getAllLocationsForDisplay(locationTypeFilter, q, currentUserId);
   const out = [];

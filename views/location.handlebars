@@ -3,6 +3,14 @@
 <section class="locations-page">
     <h1>Locations</h1>
 
+    <section class="locations-favorites-section">
+        <h2>Favorite Locations</h2>
+        <p id="location-favorites-summary"></p>
+        <div id="location-favorites-list">
+            <p>No favorite locations yet.</p>
+        </div>
+    </section>
+
     {{#if error}}
         <p class="error">{{error}}</p>
     {{/if}}
@@ -59,7 +67,7 @@
 
     <section class="locations-detail-section">
         <h2>Selected Location</h2>
-        <div id="location-detail-panel">
+        <div tabindex="-1" id="location-detail-panel">
             <p>Select a location from the map or the nearby list.</p>
         </div>
     </section>

@@ -8,6 +8,7 @@ import {
   createOrJoinLocationTimeSlots,
   deleteLocationById,
   deleteLocationCommentByAdmin,
+  getFavoriteLocations,
   getLocationDetailsForDisplay,
   getNearbyLocationsForMap,
   toggleFavoriteLocationForUser,
@@ -89,6 +90,16 @@ router.get('/search/nearby', authMW, async (req, res) => {
     return res.status(400).json({error: errorTextFromCatch(e, 'Could not load nearby locations')});
   }
 });
+
+router.get('/favorites', authRedirectMW, async(req, res) => {
+  try {
+    const favoriteLocations = await getFavoriteLocations(userIdFromSession(req));
+
+    return res.json(favoriteLocations);
+  } catch (e) {
+    return res.status(400).json({error: e});
+  }
+})
 
 router.get('/:locationId', authMW, async (req, res) => {
   try {
