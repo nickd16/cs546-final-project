@@ -1,4 +1,6 @@
-<div>
+<link rel="stylesheet" type="text/css" href="/public/css/location.css">
+
+<section class="locations-page">
     <h1>Requests</h1>
 
     {{#if isAdmin}}
@@ -7,7 +9,8 @@
     <p class="error">{{error}}</p>
     {{/if}}
 
-    <h2>Location Requests:</h2>
+    <section class="locations-admin-section">
+    <h2>Location Requests</h2>
     {{#if locationRequests.length}}
     <ul>
         {{#each locationRequests}}
@@ -34,92 +37,114 @@
     {{else}}
     <p>Nothing there</p>
     {{/if}}
+    </section>
 
     {{else}}
     {{!-- user access --}}
+    <section class="locations-admin-section">
     <h2>Create Location Request</h2>
 
     <form action="/request/post" method="post" id="requestForm">
+        <p>
+            <label for="requestCategory">Location type</label><br>
+            <select name="categoryFilter" id="requestCategory">
+                <option value="unselected">Please choose an option</option>
+                <option value="tennis">Tennis</option>
+                <option value="basketball">Basketball</option>
+                <option value="handball">Handball</option>
+                <option value="hiking">Hiking</option>
+            </select>
+        </p>
 
-        <label for="categoryFilter">Please choose a location category: </label>
-        <select name="categoryFilter" id="requestCategory">
-            <option value="unselected"> <-- Please choose an option --> </option>
-            <option value="tennis">Tennis</option>
-            <option value="basketball">Basketball</option>
-            <option value="handball">Handball</option>
-            <option value="hiking">Hiking</option>
-        </select>
-        <br>
+        <p>
+            <label for="locationName">Location name</label><br>
+            <input required type="text" name="locationName" id="locationName">
+        </p>
 
-        <label for="locationName">Enter the Location Name: </label>
-        <input required type="text" name="locationName" id="locationName">
-        <br>
+        <p>
+            <label for="descriptionText">Description</label><br>
+            <input type="text" name="description" id="descriptionText">
+        </p>
 
-        <label for="description">Enter a description for the Location: </label>
-        <input type="text" name="description" id="descriptionText">
-        <br>
+        <p>
+            <label for="body">Reason for request</label><br>
+            <input required type="text" name="body" id="body">
+        </p>
 
-        <label for="body">Describe the reasoning for adding the Location: </label>
-        <input required type="text" name="body" id="body">
-        <br>
+        <p>
+            <label for="addressText">Address</label><br>
+            <input type="text" name="address" id="addressText">
+        </p>
 
-        <label for="address">Enter the address: </label>
-        <input type="text" name="address" id="addressText">
-        <br>
+        <p>
+            <label for="latitude">Latitude</label><br>
+            <input required type="number" id="latitude" name="latitude" step="any" inputmode="decimal" placeholder="0.00">
+        </p>
 
-        <label for="latitude">Enter the latitude: </label>
-        <input required type="number" id="latitude" name="latitude" step="any" inputmode="decimal" placeholder="0.00">
-        <br>
-
-
-        <label for="longitude">Enter the longitude: </label>
-        <input required type="number" id="longitude" name="longitude" step="any" inputmode="decimal" placeholder="0.00">
-        <br>
+        <p>
+            <label for="longitude">Longitude</label><br>
+            <input required type="number" id="longitude" name="longitude" step="any" inputmode="decimal" placeholder="0.00">
+        </p>
 
         {{!-- Hide for handball option --}}
         <div class="basketball tennis hiking">
-            <input type="checkbox" id="accessible" name="accessible">
-            <label for="accessible">Accessible? </label>
+            <p>
+                <label for="accessible">Accessible</label><br>
+                <input type="checkbox" id="accessible" name="accessible">
+            </p>
         </div>
 
         {{!-- Hide for hiking option --}}
         <div class="basketball tennis handball">
-            <label for="numCourts">Number of Courts: </label>
-            <input type="number" id="numCourts" name="numCourts">
+            <p>
+                <label for="numCourts">Number of courts</label><br>
+                <input type="number" id="numCourts" name="numCourts">
+            </p>
         </div>
 
         {{!-- Hide for basketball hiking handball --}}
         <div class="tennis">
-            <label for="indoor">Indoor </label>
-            <input type="radio" name="indoorOutdoor" id="indoor" value="indoor">
-            <br>
-            <label for="outdoor">Outdoor</label>
-            <input type="radio" name="indoorOutdoor" id="outdoor" value="outdoor">
-            <br>
-            <label for="tennisType">Tennis Type: </label>
-            <input type="text" id="tennisType" name="tennisType">
+            <p>
+                <label for="indoor">Indoor</label>
+                <input type="radio" name="indoorOutdoor" id="indoor" value="indoor">
+            </p>
+            <p>
+                <label for="outdoor">Outdoor</label>
+                <input type="radio" name="indoorOutdoor" id="outdoor" value="outdoor">
+            </p>
+            <p>
+                <label for="tennisType">Tennis type</label><br>
+                <input type="text" id="tennisType" name="tennisType">
+            </p>
         </div>
 
-        {{!-- Hide for baseketball tennis handball --}}
+        {{!-- Hide for basketball tennis handball --}}
         <div class="hiking">
-            <label for="length">Length: </label>
-            <input type="text" id="length" name="length">
-            <br>
-            <label for="difficulty">Difficulty: </label>
-            <input type="text" id="difficulty" name="difficulty">
-            <br>
-            <label for="otherDetails">Other Details: </label>
-            <input type="text" id="otherDetails" name="otherDetails">
-            <br>
-            <label for="limitedAccess">Does Trail Have Limitied Access: </label>
-            <input type="text" id="limitedAccess" , name="limitedAccess">
+            <p>
+                <label for="length">Length</label><br>
+                <input type="text" id="length" name="length">
+            </p>
+            <p>
+                <label for="difficulty">Difficulty</label><br>
+                <input type="text" id="difficulty" name="difficulty">
+            </p>
+            <p>
+                <label for="otherDetails">Other details</label><br>
+                <input type="text" id="otherDetails" name="otherDetails">
+            </p>
+            <p>
+                <label for="limitedAccess">Does trail have limited access</label><br>
+                <input type="text" id="limitedAccess" name="limitedAccess">
+            </p>
         </div>
 
-        {{!--  hidden by default on please choose an option --}}
-        <button hidden id = "submitRequest" type = "submit">Submit Request</button>
-
+        <p>
+            {{!-- hidden by default on choose option --}}
+            <button hidden id="submitRequest" type="submit">Submit Request</button>
+        </p>
     </form>
+    </section>
     {{/if}}
 
     <script src="/public/js/requestHandler.js"></script>
-</div>
+</section>
