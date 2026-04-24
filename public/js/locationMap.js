@@ -5,6 +5,8 @@
   const pageMeta = window.locationPageMeta || {};
   const nearbyListElement = document.getElementById('location-nearby-list');
   const nearbySummaryElement = document.getElementById('location-nearby-summary');
+  const favoriteListElement = document.getElementById('location-favorites-list');
+  const favoriteSummaryElement = document.getElementById('location-favorites-summary');
   const detailPanelElement = document.getElementById('location-detail-panel');
   const mapMessageElement = document.getElementById('location-map-message');
   const typeFilterElement = document.getElementById('location-type-filter');
@@ -37,6 +39,7 @@
 
   restorePageState();
   bindEvents();
+  fetchFavoriteLocations();
   updateNearbyLocations();
   if (autoGeolocateElement && autoGeolocateElement.checked) requestBrowserLocation();
 
@@ -204,6 +207,67 @@
       });
   }
 
+  function fetchFavoriteLocations() {
+    if (!favoriteListElement || !favoriteSummaryElement) return;
+
+    favoriteSummaryElement.textContent = 'Loading favorites';
+    favoriteListElement.innerHTML = '<p>Loading favorite locations.</p>';
+
+    fetch('/location/favorites')
+      .then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) throw new Error(data && data.error ? data.error : 'Could not load favorite locations');
+          return data;
+        });
+      })
+      .then(function (favoritesResponse) {
+        if (!Array.isArray(favoritesResponse) || !favoritesResponse.length) {
+          renderFavoriteLocations([]);
+          return;
+        }
+
+        renderFavoriteLocations(favoritesResponse);
+      })
+      .catch(function (error) {
+        favoriteSummaryElement.textContent = 'Could not load favorites';
+        favoriteListElement.innerHTML = '<p class="error">' + escapeHtml(error.message || 'Could not load favorite locations') + '</p>';
+      });
+  }
+
+  function renderFavoriteLocations(favorites) {
+    if (!favoriteListElement || !favoriteSummaryElement) return;
+
+    if (!Array.isArray(favorites) || !favorites.length) {
+      favoriteSummaryElement.textContent = '0 favorites saved';
+      favoriteListElement.innerHTML = '<p>No favorite locations yet.</p>';
+      return;
+    }
+
+    favorites.sort(function (a, b) {
+      return String(a.locationName || '').localeCompare(String(b.locationName || ''));
+    });
+
+    favoriteSummaryElement.textContent = favorites.length + ' favorite location' + (favorites.length === 1 ? '' : 's');
+    let html = '<ul>';
+    for (let i = 0; i < favorites.length; i++) {
+      const location = favorites[i];
+      html += '<li>';
+      html += '<button type="button" class="location-favorite-button" data-location-id="' + escapeAttribute(location.id) + '">' + escapeHtml(location.locationName || 'Unknown location') + '</button>';
+      if (location.locationType) html += ' <span> <strong>Type:</strong> ' + escapeHtml(location.locationType) + '</span>';
+      if (location.address) html += ' <span> <strong>Address:</strong> ' + escapeHtml(location.address) + '</span>';
+      html += '</li>';
+    }
+    html += '</ul>';
+    favoriteListElement.innerHTML = html;
+
+    const buttons = favoriteListElement.getElementsByClassName('location-favorite-button');
+    for (let i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () {
+        selectLocation(this.getAttribute('data-location-id'));
+      });
+    }
+  }
+
   function renderMap(referencePoint, radiusMiles) {
     clearMarkers();
 
@@ -287,6 +351,7 @@
     state.selectedLocationId = locationId;
     savePageState();
     loadLocationDetails(locationId);
+    detailPanelElement.focus();
   }
 
   function loadLocationDetails(locationId) {

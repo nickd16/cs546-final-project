@@ -9,6 +9,29 @@
     align-items: start;
 }
 
+.locations-favorites-section {
+    margin: 1rem 0 1.25rem;
+}
+
+#location-favorites-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.55rem;
+}
+
+#location-favorites-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.location-favorite-button {
+    padding: 0.35rem 0.6rem;
+}
+
 .locations-map-panel,
 .locations-sidebar,
 .locations-detail-section,
