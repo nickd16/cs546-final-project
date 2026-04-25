@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-{{!-- <head>
-    <meta charset="utf-8">
-    <title>My Site</title>
-    <link rel="stylesheet" href="/public/css/main.css">
-</head> --}}
 <head>
     <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="/public/css/style.css">
@@ -20,6 +15,7 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""
     ></script>
+    <title>{{title}}</title>
 </head>
 
 <body>
@@ -31,6 +27,7 @@
     <header>
         <nav>
             <ul class="navi">
+                {{#if loggedIn}}
                 <li class="menu"><a class=menua href="./">Home</a></li>
                 <li class="menu"><a class=menua href="./forum">Forum</a></li>
                 <li class="menu"><a class=menua href="./location">Locations</a></li>
@@ -39,6 +36,10 @@
                 {{/if}}
                 <li class="menu"><a class=menua href="./request">Request</a></li>
                 <li class="menu"><a class=menua href="./logout">Logout</a></li>
+                {{else}}
+                <li class="menu"><a class=menua href="./login">Login</a></li>
+                <li class="menu"><a class=menua href="./register">Register</a></li>
+                {{/if}}
             </ul>
         </nav>
     </header>

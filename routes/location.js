@@ -61,6 +61,8 @@ router.get('/', authRedirectMW, async (req, res) => {
 
     res.render('location', {
       layout: 'main.handlebars',
+      title: "Locations", 
+      "loggedIn": req.user,
       mapLocationsJson: '[]',
       selectedLocationId,
       error,
@@ -69,6 +71,8 @@ router.get('/', authRedirectMW, async (req, res) => {
   } catch (e) {
     res.status(500).render('location', {
       layout: 'main.handlebars',
+      title: "Locations",
+      "loggedIn": req.user,
       mapLocationsJson: '[]',
       selectedLocationId: '',
       error: errorTextFromCatch(e, 'Could not load locations'),

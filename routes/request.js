@@ -12,7 +12,7 @@ const userIdFromSession = (req) => {
 };
 
 const requireAdminPage = (req, res, next) => {
-  if (!req.user || !req.user.isAdmin) return res.status(403).render('request', { layout: 'main.handlebars', locationRequests: [], error: 'Admin access required' });
+  if (!req.user || !req.user.isAdmin) return res.status(403).render('request', { layout: 'main.handlebars', "loggedIn": req.user, title: 'Requests', locationRequests: [], error: 'Admin access required' });
   next();
 };
 
@@ -20,11 +20,11 @@ router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
   try {
     const requests = await getWaitingRequestsForAdmin();
     
-    res.render('request', { layout: 'main.handlebars', locationRequests: requests, error: null });
+    res.render('request', { layout: 'main.handlebars', "loggedIn": req.user, title: 'Requests', "loggedIn": req.user, locationRequests: requests, error: null });
   } catch (e) {
     let msg = String(e);
     if (e && e.message) msg = String(e.message);
-    res.status(500).render('request', { layout: 'main.handlebars', locationRequests: [], error: msg });
+    res.status(500).render('request', { layout: 'main.handlebars', "loggedIn": req.user, title: 'Requests', "loggedIn": req.user, locationRequests: [], error: msg });
   }
 });
 

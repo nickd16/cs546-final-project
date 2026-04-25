@@ -38,9 +38,9 @@ router.get('/', authRedirectMW, async (req, res) => {
     const posts = await getAllPostsForDisplay(catagoryFilter, qText, currentUserId, onlyUserId); // Change this for comment rendering
     let error = null;
     if (req.query.error) error = String(req.query.error);
-    res.render('forum', { layout: 'main.handlebars', posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
+    res.render('forum', { layout: 'main.handlebars', title: "Forum", "loggedIn": req.user, posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
   } catch (e) {
-    res.status(500).render('forum', { layout: 'main.handlebars', posts: [], error: errorTextFromCatch(e, 'Could not load forum'), catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
+    res.status(500).render('forum', { layout: 'main.handlebars', title: "Forum", "loggedIn": req.user, posts: [], error: errorTextFromCatch(e, 'Could not load forum'), catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
   }
 });
 

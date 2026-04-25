@@ -12,7 +12,7 @@ const userIdFromSession = (req) => {
 };
 
 const requireAdminPage = (req, res, next) => {
-  if (!req.user || !req.user.isAdmin) return res.status(403).render('report', { layout: 'main.handlebars', postReports: [], commentReports: [], error: 'Admin access required' });
+  if (!req.user || !req.user.isAdmin) return res.status(403).render('report', { layout: 'main.handlebars', title: 'Reports', postReports: [], commentReports: [], error: 'Admin access required' });
   next();
 };
 
@@ -28,11 +28,11 @@ router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
       if (r.typeOfContent === 'post') postReports.push(r);
       else if (r.typeOfContent === 'comment') commentReports.push(r);
     }
-    res.render('report', { layout: 'main.handlebars', postReports, commentReports, error: pageError });
+    res.render('report', { layout: 'main.handlebars', "loggedIn": req.user, title: 'Reports', "loggedIn": req.user, postReports, commentReports, error: pageError });
   } catch (e) {
     let msg = String(e);
     if (e && e.message) msg = String(e.message);
-    res.status(500).render('report', { layout: 'main.handlebars', postReports: [], commentReports: [], error: msg });
+    res.status(500).render('report', { layout: 'main.handlebars', "loggedIn": req.user, title: 'Reports', "loggedIn": req.user, postReports: [], commentReports: [], error: msg });
   }
 });
 

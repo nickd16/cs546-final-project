@@ -26,7 +26,7 @@ const rewriteUnsupportedBrowserMethods = (req, res, next) => {
 // await db.dropDatabase();
 
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({"quiet": true});
 
 app.use('/public', express.static('public'));
 app.use(express.json());

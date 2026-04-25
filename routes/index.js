@@ -3,7 +3,7 @@ import locationRoutes from './location.js';
 import reportRoutes from './report.js';
 import requestRoutes from './request.js';
 import userRoutes from './user.js';
-import { authRedirectMW } from './middleware.js';
+import { authRedirectMW, authCheckMW } from './middleware.js';
 import {static as staticDir} from 'express';
 
 const constructorMethod = (app) => {
@@ -16,10 +16,11 @@ const constructorMethod = (app) => {
   app.use('/', userRoutes); // user login and authentication routes // maybe I can put this on the main route otherwise /user
   app.use('/public', staticDir('public'));
   
-  app.use('{*splat}', (req, res) => {
+  app.use('{*splat}', authCheckMW, (req, res) => {
     console.log('[404 splat]', req.method, 'originalUrl=', req.originalUrl, 'path=', req.path, 'url=', req.url);
-    res.status(404).json({error: 'Route Not found'});
-    // res.status(404).render('error', {"error_text": "Route not found"});
+    // res.status(404).json({error: 'Route Not found'});
+    
+    res.status(404).render('error', {layout: 'main.handlebars', "loggedIn": req.user, "title": "Error", "error_text": "Route not found"});
   });
 };
 

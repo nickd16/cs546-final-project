@@ -38,7 +38,7 @@
             <h3>{{title}}</h3>
             <p>By {{authorUsername}}</p>
             <p>{{body}}</p>
-            <p>
+            <div>
                 {{#if isDeleted}}
                 <button type="button" disabled>Like ({{likeCount}})</button>
                 <button type="button" disabled>Dislike ({{dislikeCount}})</button>
@@ -60,16 +60,16 @@
                 {{else}}
                 <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
                 {{/if}}
-            </p>
+            </div>
             <p>Comments:</p>
             {{#unless isDeleted}}
             <form action="/forum/{{_idStr}}/comment" method="post">
                 <input type="hidden" name="parentId" value="">
-                <p>
+                <div>
                     <label for="forum-new-comment-{{_idStr}}">Add a comment</label><br>
                     <textarea id="forum-new-comment-{{_idStr}}" name="body" rows="3" maxlength="5000" required></textarea>
-                </p>
-                <p><button type="submit">Post comment</button></p>
+                </div>
+                <div><button type="submit">Post comment</button></div>
             </form>
             {{/unless}}
 
@@ -77,7 +77,7 @@
                 {{#each commentTree}}
                     {{> comment}}
                 {{/each}}
-            <div>
+            </div>
 
             <hr>
         </li>
@@ -90,28 +90,29 @@
     <dialog id="forumNewPostDialog">
         <h2>New post</h2>
         <form action="/forum" method="post">
-            <p>
+            <div>
                 <label for="forum-title">Title</label><br>
                 <input id="forum-title" name="title" type="text" maxlength="200" required>
-            </p>
-            <p>
+            </div>
+            <div>
                 <label for="forum-category">Category</label><br>
                 <select id="forum-category" name="catagory" required>
+                    <option value="" disabled selected>Select forum type</option>
                     <option value="all">All</option>
                     <option value="tennis">Tennis</option>
                     <option value="basketball">Basketball</option>
                     <option value="handball">Handball</option>
                     <option value="hiking">Hiking</option>
                 </select>
-            </p>
-            <p>
+            </div>
+            <div>
                 <label for="forum-body">Body</label><br>
                 <textarea id="forum-body" name="body" rows="6" maxlength="10000" required></textarea>
-            </p>
-            <p>
+            </div>
+            <div>
                 <button type="submit">Post</button>
                 <button type="button" id="forumNewPostCancel">Cancel</button>
-            </p>
+            </div>
         </form>
     </dialog>
 
@@ -119,62 +120,64 @@
         <h2>Reply</h2>
         <form id="forumReplyForm" action="/forum/POST_ID/comment" method="post">
             <input type="hidden" name="parentId" id="forum-reply-parentid" value="">
-            <p>
+            <div>
                 <label for="forum-reply-body">Your reply</label><br>
                 <textarea id="forum-reply-body" name="body" rows="4" maxlength="5000" required></textarea>
-            </p>
-            <p>
+            </div>
+            <div>
                 <button type="submit">Reply</button>
                 <button type="button" id="forumReplyCancel">Cancel</button>
-            </p>
+            </div>
         </form>
     </dialog>
 
     <dialog id="forumCommentReportDialog">
         <h2>Report comment</h2>
         <form id="forumCommentReportForm" action="/forum/POST_ID/comment/COMMENT_ID/report" method="post">
-            <p>
+            <div>
                 <label for="forum-comment-report-reason">Why are you reporting?</label><br>
                 <select id="forum-comment-report-reason" name="reason" required>
+                    <option value="" disabled selected>Select reason</option>
                     <option value="spam">Spam</option>
                     <option value="harassment">Harassment</option>
                     <option value="hate">Hate</option>
                     <option value="violence">Violence</option>
                     <option value="other">Other</option>
                 </select>
-            </p>
-            <p>
+            </div>
+            <div>
                 <label for="forum-comment-report-description">Description</label><br>
                 <textarea id="forum-comment-report-description" name="description" rows="4" maxlength="2000"></textarea>
-            </p>
-            <p>
+            </div>
+            <div>
                 <button type="submit">Submit report</button>
                 <button type="button" id="forumCommentReportCancel">Cancel</button>
-            </p>
+            </div>
         </form>
     </dialog>
 
     <dialog id="forumReportDialog">
         <h2>Report</h2>
         <form id="forumReportForm" action="/forum/POST_ID/report" method="post">
-            <p>
+            <div>
                 <label for="forum-report-reason">Why are you reporting?</label><br>
                 <select id="forum-report-reason" name="reason" required>
+                    <option value="" disabled selected>Select reason</option>
                     <option value="spam">Spam</option>
                     <option value="harassment">Harassment</option>
                     <option value="hate">Hate</option>
                     <option value="violence">Violence</option>
                     <option value="other">Other</option>
                 </select>
-            </p>
-            <p>
+            </div>
+            <div>
                 <label for="forum-report-description">Description</label><br>
                 <textarea id="forum-report-description" name="description" rows="4" maxlength="2000"></textarea>
-            </p>
-            <p>
+            </div>
+            <div>
                 <button type="submit">Submit report</button>
                 <button type="button" id="forumReportCancel">Cancel</button>
-            </p>
+            </div>
         </form>
     </dialog>
 

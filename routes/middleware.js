@@ -13,7 +13,7 @@ export const authRedirectMW = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     console.log('[authRedirectMW] jwt ok, next()');
-    next();
+    return next();
   } catch (err) {
     console.log('[authRedirectMW] jwt verify failed', err.message, 'redirect /login');
     return res.redirect('/login');
@@ -37,6 +37,27 @@ export const authReverseRedirectMW = (req, res, next) => {
     return res.redirect('/');
   } catch (err) {
     console.log('[authReverseRedirectMW] jwt verify failed', err.message, 'next()');
+    return next();
+    // res.status(400).json({ message: 'Invalid token' });
+  }
+};
+
+export const authCheckMW = (req, res, next) => {
+  const token = req.session.token;// = token;
+  // const token = req.header('Authorization');
+  console.log('[authCheckMW]', req.method, req.originalUrl || req.url, 'hasToken=', Boolean(token));
+  if (!token) {
+    console.log('[authCheckMW] no session token');
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    console.log('[authCheckMW] jwt ok, next()');
+    return next();
+  } catch (err) {
+    console.log('[authCheckMW] jwt verify failed', err.message);
     return next();
     // res.status(400).json({ message: 'Invalid token' });
   }

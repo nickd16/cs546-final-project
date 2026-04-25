@@ -18,7 +18,8 @@ router
   .route('/')
   .get(authRedirectMW, async (req, res) => {
     // code here for GET
-    res.render('index');
+    const userOb = await getUserById(req.user["id"]);
+    res.render('index', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Home', "username": userOb["username"]});
    });
 
 // Give the login page in html
@@ -27,7 +28,7 @@ router
   .route('/login')
   .get(authReverseRedirectMW, async (req, res) => {
     //code here for GET
-    res.render('login', {layout: 'LR.handlebars'});
+    res.render('login', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Login'});
    })
   .post([
     body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
@@ -43,14 +44,14 @@ router
   ],
   async (req, res) => {
     const errors = validationResult(req); // This will check for the username and password validation errors
-    if (!errors.isEmpty()) return res.status(400).render('login', {layout: 'LR.handlebars', error: 'Error registering user: ' + errors.array()[0]['msg'] });
+    if (!errors.isEmpty()) return res.status(400).render('login', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Login', error: 'Error registering user: ' + errors.array()[0]['msg'] });
 
     const { username, password } = req.body;
     
     try {
       await passwordMatchesHash(username, password);
     } catch (err) {
-      return res.status(400).render('login', {layout: 'LR.handlebars', error: 'Error logging in: ' + err.message});
+      return res.status(400).render('login', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Login', error: 'Error logging in: ' + err.message});
     }
 
     // login and get token
@@ -60,7 +61,7 @@ router
       req.session.token = token; // Using sessions
       return res.redirect('/');
     } catch (err) {
-      return res.status(500).render('login', {layout: 'LR.handlebars', error: 'Error logging in: ' + err.message});
+      return res.status(500).render('login', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Login', error: 'Error logging in: ' + err.message});
     }
   });
 
@@ -71,7 +72,7 @@ router
   .route('/register')
   .get(authReverseRedirectMW, async (req, res) => {
     //code here for GET
-    res.render('register', {layout: 'LR.handlebars'});
+    res.render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register'});
    }) 
   .post([
     body('username').notEmpty().withMessage("Enter a not empty username").escape().custom(async value => {
@@ -86,7 +87,7 @@ router
     // validation
     const errors = validationResult(req); // This will check for the username and password validation errors
     if (!errors.isEmpty()) {
-      return res.status(400).render('register', {layout: 'LR.handlebars', error: 'Error registering user: ' + errors.array()[0]['msg'] });
+      return res.status(400).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', error: 'Error registering user: ' + errors.array()[0]['msg'] });
     }
     const { username, password } = req.body; // Need to ensure username and password exist
 
@@ -94,10 +95,10 @@ router
       const user = await registerUser(username, password);
 
       // res.status(201).json({ message: 'User registered successfully' });
-      res.status(201).render('register', {layout: 'LR.handlebars', success: 'User registered successfully! Now go to login to login.'});
+      res.status(201).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', success: 'User registered successfully! Now go to login to login.'});
     } catch (err) {
       // res.status(500).json({ message: 'Error registering user', error: err.message });
-      res.status(500).render('register', {layout: 'LR.handlebars', error: 'Error registering user: ' + err.message});
+      res.status(500).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', error: 'Error registering user: ' + err.message});
     }
    });
   
@@ -184,7 +185,8 @@ router
   .get(authRedirectMW, async (req, res) => {
     //code here for GET
     delete req.session.token;
-    return res.render('logout', {layout: 'LR.handlebars'});
+    delete req.user;
+    return res.render('logout', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Logout',});
    })
 
 

@@ -20,15 +20,15 @@
     {{/if}}
 
     <div class="locations-top-layout">
-        <section class="locations-map-panel">
+        <div class="locations-map-panel">
             <div id="locations-map" class="locations-map"></div>
-        </section>
+        </div>
 
         <section class="locations-sidebar">
             <div class="locations-controls">
                 <label for="location-type-filter">Location type</label>
                 <select id="location-type-filter">
-                    <option value="all">All</option>
+                    <option value="all" selected>All</option>
                     <option value="tennis">Tennis</option>
                     <option value="basketball">Basketball</option>
                     <option value="handball">Handball</option>
@@ -79,6 +79,7 @@
             <p>
                 <label for="create-location-type">Location type</label><br>
                 <select id="create-location-type" name="locationType" required>
+                    <option value="" disabled selected>Select location type</option>
                     <option value="tennis">Tennis</option>
                     <option value="basketball">Basketball</option>
                     <option value="handball">Handball</option>
