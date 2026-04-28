@@ -31,7 +31,6 @@ export const createForumPostReport = async (reporterUserId, postId, reason, desc
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot report a deleted post');
 
   const reportCollection = await report();
 
@@ -79,11 +78,9 @@ export const createForumCommentReport = async (reporterUserId, postId, commentId
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot report on a deleted post');
 
   const comment = findCommentInPost(post, commentId);
   if (!comment) throw new Error('Comment not found');
-  if (comment.isDeleted) throw new Error('Cannot report a deleted comment');
 
   const reportCollection = await report();
 

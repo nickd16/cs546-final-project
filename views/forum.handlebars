@@ -39,30 +39,20 @@
             <p>By {{authorUsername}}</p>
             <p>{{body}}</p>
             <div>
-                {{#if isDeleted}}
-                <button type="button" disabled>Like ({{likeCount}})</button>
-                <button type="button" disabled>Dislike ({{dislikeCount}})</button>
-                {{else}}
                 <form action="/forum/{{_idStr}}/like" method="post">
                     <button type="submit">Like ({{likeCount}})</button>
                 </form>
                 <form action="/forum/{{_idStr}}/dislike" method="post">
                     <button type="submit">Dislike ({{dislikeCount}})</button>
                 </form>
-                {{/if}}
                 {{#if isMine}}
                 <form action="/forum/{{_idStr}}/delete" method="post">
                     <button type="submit">Delete</button>
                 </form>
                 {{/if}}
-                {{#if isDeleted}}
-                <button type="button" disabled>Report</button>
-                {{else}}
                 <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
-                {{/if}}
             </div>
             <p>Comments:</p>
-            {{#unless isDeleted}}
             <form action="/forum/{{_idStr}}/comment" method="post">
                 <input type="hidden" name="parentId" value="">
                 <div>
@@ -71,7 +61,6 @@
                 </div>
                 <div><button type="submit">Post comment</button></div>
             </form>
-            {{/unless}}
 
             <div class="commentTree">
                 {{#each commentTree}}

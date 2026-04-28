@@ -159,10 +159,6 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
 
     let title = p.title;
     let body = p.body;
-    if (p.isDeleted && (!title || !body)) {
-      title = 'Post deleted';
-      body = 'Post deleted';
-    }
 
     let isMine = false;
     if (currentUserIdStr) {
@@ -183,7 +179,6 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       comment["dislikeCount"] = dislikedC.length;
       comment["_idStr"] = comment["_id"].toString();
       comment["_postIdStr"] = postIdStr;
-      if (comment["isDeleted"] === undefined || comment["isDeleted"] === null) comment["isDeleted"] = false;
     }
     // console.log(processedCommentList); // TODO REMOVE
     
@@ -206,7 +201,6 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       body,
       likeCount: liked.length,
       dislikeCount: disliked.length,
-      isDeleted: Boolean(p.isDeleted),
       isMine,
       commentTree: commentTree
     });
@@ -244,7 +238,6 @@ export const toggleLikePost = async (postId, userId) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot like a deleted post');
 
   const uid = new ObjectId(userIdStr);
   const liked = emptyIfMissing(post.likedUserIdList);
@@ -269,7 +262,6 @@ export const toggleDislikePost = async (postId, userId) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot dislike a deleted post');
 
   const uid = new ObjectId(userIdStr);
   const disliked = emptyIfMissing(post.dislikedUserIdList);
@@ -310,14 +302,12 @@ export const addCommentToPost = async (postId, userId, body, parentIdStr) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot comment on a deleted post');
 
   let parentId = null;
   if (parentIdStr && String(parentIdStr).trim()) {
     parentIdStr = await validateIdField(String(parentIdStr).trim());
     const parent = findCommentInPost(post, parentIdStr);
     if (!parent) throw new Error('Parent comment not found');
-    if (parent.isDeleted) throw new Error('Cannot reply to a deleted comment');
     parentId = new ObjectId(parentIdStr);
   }
 
@@ -330,7 +320,6 @@ export const addCommentToPost = async (postId, userId, body, parentIdStr) => {
     body,
     likedUserIdList: [],
     dislikedUserIdList: [],
-    isDeleted: false,
   };
 
   await forumCollection.updateOne({ _id: new ObjectId(postId) }, { $push: { commentList: newComment } });
@@ -346,11 +335,9 @@ export const toggleLikeComment = async (postId, commentId, userId) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot like on a deleted post');
 
   const c = findCommentInPost(post, commentId);
   if (!c) throw new Error('Comment not found');
-  if (c.isDeleted) throw new Error('Cannot like a deleted comment');
 
   const uid = new ObjectId(userIdStr);
   const commentOid = new ObjectId(commentId);
@@ -382,11 +369,9 @@ export const toggleDislikeComment = async (postId, commentId, userId) => {
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
-  if (post.isDeleted) throw new Error('Cannot dislike on a deleted post');
 
   const c = findCommentInPost(post, commentId);
   if (!c) throw new Error('Comment not found');
-  if (c.isDeleted) throw new Error('Cannot dislike a deleted comment');
 
   const uid = new ObjectId(userIdStr);
   const commentOid = new ObjectId(commentId);
