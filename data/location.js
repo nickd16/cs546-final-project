@@ -104,6 +104,66 @@ const buildDateDisplay = (value) => {
   return {dateTimeISO, dateTimeLabel};
 };
 
+const validateCommentBody = (body) => {
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Comment body is required');
+  if (body.trim().length > 5000) throw new Error('Comment is too long');
+  return body.trim();
+};
+
+const findCommentInLocation = (loc, commentIdStr) => {
+  const list = emptyIfMissing(loc.commentList);
+  const cid = new ObjectId(commentIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(cid)) return list[i];
+  }
+  return null;
+};
+
+const getChildComments = async (processedCommentList, pId) => {
+  const childCommentList = [];
+  for (let i = 0; i < processedCommentList.length; i++) {
+    const processedComment = processedCommentList[i];
+    if (processedComment.parentId != null && processedComment.parentId.toString() === pId.toString()) {
+      processedComment.childrenCommentList = await getChildComments(processedCommentList, processedComment._id);
+      childCommentList.push(processedComment);
+    }
+  }
+  childCommentList.sort((a, b) => String(b.dateTimeISO || '').localeCompare(String(a.dateTimeISO || '')));
+  return childCommentList;
+};
+
+const getCommentTree = async (processedCommentList, pId) => {
+  const commentTree = processedCommentList.filter((comment) => pId == null || comment.parentId == null ? comment.parentId == pId : comment.parentId.toString() === pId.toString());
+  for (let i = 0; i < commentTree.length; i++) {
+    commentTree[i].childrenCommentList = await getChildComments(processedCommentList, commentTree[i]._id);
+  }
+  commentTree.sort((a, b) => String(b.dateTimeISO || '').localeCompare(String(a.dateTimeISO || '')));
+  return commentTree;
+};
+
+const collectIdsFromCommentTreeNodes = (nodes) => {
+  const out = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (!node || !node._id) continue;
+    let oid = node._id;
+    if (!(oid instanceof ObjectId)) oid = new ObjectId(oid.toString());
+    out.push(oid);
+    const kids = node.childrenCommentList;
+    if (kids && kids.length) out.push(...collectIdsFromCommentTreeNodes(kids));
+  }
+  return out;
+};
+
+const getCommentSubtreeObjectIdsForPull = async (commentList, rootIdStr) => {
+  const rootOid = new ObjectId(rootIdStr);
+  const descendantTree = await getChildComments(commentList, rootOid);
+  return [rootOid, ...collectIdsFromCommentTreeNodes(descendantTree)];
+};
+
+const snapDownToSlotBoundary = (date, slotMs) => new Date(Math.floor(date.getTime() / slotMs) * slotMs);
+const snapUpToSlotBoundary = (date, slotMs) => new Date(Math.ceil(date.getTime() / slotMs) * slotMs);
+
 const getAverageRatingValue = (ratingList) => {
   const ratings = emptyIfMissing(ratingList);
   if (!ratings.length) return null;
@@ -453,22 +513,34 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
   }
   timeSlots.sort((a, b) => String(a.startISO).localeCompare(String(b.startISO)));
 
-  const comments = [];
+  const processedCommentList = [];
   for (let i = 0; i < commentList.length; i++) {
     const comment = commentList[i];
     const dateData = buildDateDisplay(comment.dateTimeCreated);
     const uid = String(comment.userId || '');
-    comments.push({
+    const likedUserIdList = emptyIfMissing(comment.likedUserIdList).map((id) => id.toString());
+    const dislikedUserIdList = emptyIfMissing(comment.dislikedUserIdList).map((id) => id.toString());
+    let myVote = '';
+    if (currentUserIdStr) {
+      if (likedUserIdList.indexOf(currentUserIdStr) !== -1) myVote = 'like';
+      if (dislikedUserIdList.indexOf(currentUserIdStr) !== -1) myVote = 'dislike';
+    }
+    processedCommentList.push({
+      _id: comment._id ? new ObjectId(comment._id.toString()) : new ObjectId(),
       _idStr: comment._id ? comment._id.toString() : '',
       userId: uid,
       authorUsername: userMap[uid] || 'Unknown',
+      parentId: comment.parentId ? new ObjectId(comment.parentId.toString()) : null,
       body: comment.body || '',
       dateTimeISO: dateData.dateTimeISO,
       dateTimeLabel: dateData.dateTimeLabel,
-      isMine: currentUserIdStr && uid === currentUserIdStr
+      isMine: currentUserIdStr && uid === currentUserIdStr,
+      likeCount: likedUserIdList.length,
+      dislikeCount: dislikedUserIdList.length,
+      myVote
     });
   }
-  comments.sort((a, b) => String(b.dateTimeISO).localeCompare(String(a.dateTimeISO)));
+  const comments = await getCommentTree(processedCommentList, null);
 
   return {
     ...base,
@@ -539,34 +611,53 @@ export const addLocationRating = async (locationId, userId, score, review) => {
   return true;
 };
 
-export const addLocationComment = async (locationId, userId, body) => {
+export const addLocationComment = async (locationId, userId, body, parentIdStr = '') => {
   locationId = await validateIdField(locationId);
   const userIdStr = normalizeUserIdString(userId);
   await validateIdField(userIdStr);
-  const cleanBody = parseStringField(body, 'Comment', true);
+  const cleanBody = validateCommentBody(body);
 
   const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+
+  let parentId = null;
+  if (parentIdStr && String(parentIdStr).trim()) {
+    parentIdStr = await validateIdField(String(parentIdStr).trim());
+    const parentComment = findCommentInLocation(loc, parentIdStr);
+    if (!parentComment) throw new Error('Parent comment not found');
+    parentId = new ObjectId(parentIdStr);
+  }
+
   await locationCollection.updateOne(
     {_id: new ObjectId(locationId)},
-    {$push: {commentList: {_id: new ObjectId(), dateTimeCreated: new Date(), userId: new ObjectId(userIdStr), body: cleanBody}}}
+    {$push: {commentList: {_id: new ObjectId(), dateTimeCreated: new Date(), userId: new ObjectId(userIdStr), parentId, childrenCommentIdList: [], body: cleanBody, likedUserIdList: [], dislikedUserIdList: []}}}
   );
   return true;
 };
 
-export const deleteLocationCommentByAdmin = async (locationId, commentId, adminUserId) => {
+export const deleteLocationCommentByUser = async (locationId, commentId, userId) => {
   locationId = await validateIdField(locationId);
   commentId = await validateIdField(commentId);
-  const adminIdStr = normalizeUserIdString(adminUserId);
-  await validateIdField(adminIdStr);
-
-  const userCollection = await userCollectionFn();
-  const adminUser = await userCollection.findOne({_id: new ObjectId(adminIdStr)});
-  if (!adminUser || !adminUser.isAdmin) throw new Error('Admin access required');
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
 
   const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const comment = findCommentInLocation(loc, commentId);
+  if (!comment) throw new Error('Comment not found');
+
+  let canDelete = false;
+  if (comment.userId && comment.userId.toString() === userIdStr) canDelete = true;
+  const userCollection = await userCollectionFn();
+  const user = await userCollection.findOne({_id: new ObjectId(userIdStr)});
+  if (user && user.isAdmin) canDelete = true;
+  if (!canDelete) throw new Error('You can only delete your own comment');
+
+  const list = emptyIfMissing(loc.commentList);
+  const objectIdsToPull = await getCommentSubtreeObjectIdsForPull(list, commentId);
   await locationCollection.updateOne(
     {_id: new ObjectId(locationId)},
-    {$pull: {commentList: {_id: new ObjectId(commentId)}}}
+    {$pull: {commentList: {_id: {$in: objectIdsToPull}}}}
   );
   return true;
 };
@@ -643,13 +734,15 @@ export const createOrJoinLocationTimeSlots = async (locationId, userId, startDat
   locationId = await validateIdField(locationId);
   const userIdStr = normalizeUserIdString(userId);
   await validateIdField(userIdStr);
-  const start = parseDateField(startDateTime, 'Start time');
-  const end = parseDateField(endDateTime, 'End time');
+  let start = parseDateField(startDateTime, 'Start time');
+  let end = parseDateField(endDateTime, 'End time');
   if (end <= start) throw new Error('End time must be after start time');
 
+  const slotMs = 30 * 60 * 1000;
+  start = snapDownToSlotBoundary(start, slotMs);
+  end = snapUpToSlotBoundary(end, slotMs);
   const diffMs = end.getTime() - start.getTime();
-  const slotMs = 15 * 60 * 1000;
-  if (diffMs % slotMs !== 0) throw new Error('Time slot range must use 15 minute increments');
+  if (diffMs <= 0) throw new Error('Time slot range must cover at least one 30 minute slot');
 
   const locationCollection = await location();
   const loc = await getLocationById(locationId);

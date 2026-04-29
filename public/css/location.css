@@ -81,6 +81,36 @@
     margin-top: 1.25rem;
 }
 
+.locations-time-slots-list {
+    max-height: 18rem;
+    overflow-y: auto;
+    padding-right: 0.4rem;
+}
+
+.locations-time-slots-list ul {
+    margin: 0;
+}
+
+.location-comment-card {
+    margin-bottom: 0.9rem;
+}
+
+.location-comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+}
+
+.location-comment-actions form {
+    margin: 0;
+}
+
+.locations-time-slots-list button,
+.location-comment-actions button {
+    padding: 0.45rem 0.7rem;
+}
+
 @media (max-width: 980px) {
     .locations-top-layout {
         grid-template-columns: 1fr;

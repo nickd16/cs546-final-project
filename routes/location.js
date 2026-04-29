@@ -7,7 +7,7 @@ import {
   createLocation,
   createOrJoinLocationTimeSlots,
   deleteLocationById,
-  deleteLocationCommentByAdmin,
+  deleteLocationCommentByUser,
   getFavoriteLocations,
   getLocationDetailsForDisplay,
   getNearbyLocationsForMap,
@@ -164,7 +164,9 @@ router.post('/:locationId/rating', authRedirectMW, async (req, res) => {
 
 router.post('/:locationId/comment', authRedirectMW, async (req, res) => {
   try {
-    await addLocationComment(req.params.locationId, userIdFromSession(req), req.body.body);
+    let parentId = '';
+    if (req.body.parentId) parentId = String(req.body.parentId).trim();
+    await addLocationComment(req.params.locationId, userIdFromSession(req), req.body.body, parentId);
     return locationPageRedirect(res, req.params.locationId, '', 'Comment posted');
   } catch (e) {
     return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not post comment'), '');
@@ -172,9 +174,8 @@ router.post('/:locationId/comment', authRedirectMW, async (req, res) => {
 });
 
 router.post('/:locationId/comment/:commentId/delete', authRedirectMW, async (req, res) => {
-  if (!requireAdminLocationAction(req, res)) return;
   try {
-    await deleteLocationCommentByAdmin(req.params.locationId, req.params.commentId, userIdFromSession(req));
+    await deleteLocationCommentByUser(req.params.locationId, req.params.commentId, userIdFromSession(req));
     return locationPageRedirect(res, req.params.locationId, '', 'Comment removed');
   } catch (e) {
     return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not remove comment'), '');

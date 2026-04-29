@@ -17,6 +17,7 @@
 
   const defaultCenter = [40.7128, -74.0060];
   const storageKey = 'cs546-location-page-state';
+  const uiStateKey = 'cs546-location-page-ui-state';
   const state = {
     selectedLocationId: typeof pageMeta.selectedLocationId === 'string' ? pageMeta.selectedLocationId : '',
     selectedLocationDetails: null,
@@ -26,7 +27,8 @@
     currentMarkers: [],
     currentPointMarker: null,
     currentPointCircle: null,
-    map: null
+    map: null,
+    pendingUiRestore: null
   };
 
   const map = L.map('locations-map').setView(defaultCenter, 12);
@@ -44,6 +46,14 @@
   if (autoGeolocateElement && autoGeolocateElement.checked) requestBrowserLocation();
 
   function bindEvents() {
+    document.addEventListener('submit', function (event) {
+      const form = event.target;
+      if (!form || !form.getAttribute) return;
+      const action = String(form.getAttribute('action') || '');
+      if (action.indexOf('/location/') !== 0) return;
+      saveUiState();
+    }, true);
+
     if (useMyLocationButton) {
       useMyLocationButton.addEventListener('click', function () {
         requestBrowserLocation();
@@ -106,6 +116,13 @@
       state.referenceLabel = savedState.referenceLabel || 'Saved point';
     }
     if (!state.selectedLocationId && typeof savedState.selectedLocationId === 'string') state.selectedLocationId = savedState.selectedLocationId;
+
+    try {
+      const savedUiState = JSON.parse(localStorage.getItem(uiStateKey) || 'null');
+      if (savedUiState && typeof savedUiState === 'object') state.pendingUiRestore = savedUiState;
+    } catch (e) {
+      state.pendingUiRestore = null;
+    }
   }
 
   function savePageState() {
@@ -120,6 +137,25 @@
       currentPoint: state.currentPoint
     };
     localStorage.setItem(storageKey, JSON.stringify(payload));
+  }
+
+  function saveUiState() {
+    const payload = {
+      selectedLocationId: state.selectedLocationId,
+      windowScrollY: window.scrollY || 0,
+      detailScrollTop: detailPanelElement ? detailPanelElement.scrollTop : 0
+    };
+    localStorage.setItem(uiStateKey, JSON.stringify(payload));
+  }
+
+  function applyPendingUiRestore() {
+    if (!state.pendingUiRestore || !detailPanelElement) return;
+    const savedUiState = state.pendingUiRestore;
+    if (savedUiState.selectedLocationId && savedUiState.selectedLocationId !== state.selectedLocationId) return;
+    if (typeof savedUiState.detailScrollTop === 'number') detailPanelElement.scrollTop = savedUiState.detailScrollTop;
+    if (typeof savedUiState.windowScrollY === 'number') window.scrollTo(0, savedUiState.windowScrollY);
+    state.pendingUiRestore = null;
+    localStorage.removeItem(uiStateKey);
   }
 
   function requestBrowserLocation() {
@@ -419,9 +455,10 @@
     html += '<section>';
     html += '<h4>Time Slots</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/timeslots/range" method="post">';
-    html += '<p><label for="slot-start">Start</label><br><input id="slot-start" type="datetime-local" name="startDateTime" required></p>';
-    html += '<p><label for="slot-end">End</label><br><input id="slot-end" type="datetime-local" name="endDateTime" required></p>';
-    html += '<p><button type="submit">Create or join 15 minute range</button></p>';
+    html += '<p><label for="slot-start">Start</label><br><input id="slot-start" type="datetime-local" name="startDateTime" step="1800" required></p>';
+    html += '<p><label for="slot-end">End</label><br><input id="slot-end" type="datetime-local" name="endDateTime" step="1800" required></p>';
+    html += '<p>Ranges snap to 30 minute blocks when saved.</p>';
+    html += '<p><button type="submit">Create or join 30 minute range</button></p>';
     html += '</form>';
     html += buildTimeSlotsHtml(location);
     html += '</section>';
@@ -443,10 +480,19 @@
     html += '<section>';
     html += '<h4>Coordination Comments</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/comment" method="post">';
-    html += '<p><label for="comment-body">Comment</label><br><textarea id="comment-body" name="body" rows="3" required></textarea></p>';
+    html += '<input type="hidden" name="parentId" value="">';
+    html += '<p><label for="comment-body">Comment</label><br><textarea id="comment-body" name="body" rows="3" maxlength="5000" required></textarea></p>';
     html += '<p><button type="submit">Post comment</button></p>';
     html += '</form>';
     html += buildCommentsHtml(location);
+    html += '<dialog id="locationCommentReplyDialog">';
+    html += '<h4>Reply</h4>';
+    html += '<form id="locationCommentReplyForm" action="/location/' + escapeAttribute(location._idStr) + '/comment" method="post">';
+    html += '<input type="hidden" name="parentId" id="location-comment-reply-parentid" value="">';
+    html += '<p><label for="location-comment-reply-body">Your reply</label><br><textarea id="location-comment-reply-body" name="body" rows="4" maxlength="5000" required></textarea></p>';
+    html += '<p><button type="submit">Reply</button> <button type="button" id="locationCommentReplyCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
     html += '</section>';
 
     if (pageMeta.isAdmin) {
@@ -480,6 +526,8 @@
 
     html += '</article>';
     detailPanelElement.innerHTML = html;
+    bindLocationDetailEvents(location);
+    applyPendingUiRestore();
   }
 
   function buildRatingsHtml(ratings) {
@@ -499,7 +547,7 @@
 
   function buildTimeSlotsHtml(location) {
     if (!location.timeSlots || !location.timeSlots.length) return '<p>No time slots yet.</p>';
-    let html = '<ul>';
+    let html = '<div class="locations-time-slots-list"><ul>';
     for (let i = 0; i < location.timeSlots.length; i++) {
       const slot = location.timeSlots[i];
       html += '<li>';
@@ -510,7 +558,7 @@
       html += '</form>';
       html += '</li>';
     }
-    html += '</ul>';
+    html += '</ul></div>';
     return html;
   }
 
@@ -539,22 +587,62 @@
 
   function buildCommentsHtml(location) {
     if (!location.comments || !location.comments.length) return '<p>No comments yet.</p>';
-    let html = '<ul>';
-    for (let i = 0; i < location.comments.length; i++) {
-      const comment = location.comments[i];
-      html += '<li>';
+    return '<div class="commentTree">' + buildCommentTreeHtml(location._idStr, location.comments) + '</div>';
+  }
+
+  function buildCommentTreeHtml(locationId, comments) {
+    let html = '';
+    for (let i = 0; i < comments.length; i++) {
+      const comment = comments[i];
+      html += '<div class="location-comment-card">';
       html += '<p><strong>' + escapeHtml(comment.authorUsername || 'Unknown') + '</strong></p>';
       html += '<p>' + escapeHtml(comment.body || '') + '</p>';
       html += '<p>' + escapeHtml(comment.dateTimeLabel || '') + '</p>';
-      if (pageMeta.isAdmin) {
-        html += '<form action="/location/' + escapeAttribute(location._idStr) + '/comment/' + escapeAttribute(comment._idStr) + '/delete" method="post">';
-        html += '<button type="submit">Delete comment</button>';
+      html += '<div class="location-comment-actions">';
+      html += '<button type="button" class="locationCommentReplyOpen" data-location-id="' + escapeAttribute(locationId) + '" data-commentid="' + escapeAttribute(comment._idStr) + '">Reply</button>';
+      if (comment.isMine || pageMeta.isAdmin) {
+        html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/delete" method="post">';
+        html += '<button type="submit">Delete</button>';
         html += '</form>';
       }
-      html += '</li>';
+      html += '</div>';
+      if (comment.childrenCommentList && comment.childrenCommentList.length) {
+        html += '<div class="commentTree">' + buildCommentTreeHtml(locationId, comment.childrenCommentList) + '</div>';
+      }
+      html += '</div>';
     }
-    html += '</ul>';
     return html;
+  }
+
+  function bindLocationDetailEvents(location) {
+    const replyDialog = document.getElementById('locationCommentReplyDialog');
+    const replyForm = document.getElementById('locationCommentReplyForm');
+    const replyParentInput = document.getElementById('location-comment-reply-parentid');
+    const replyBodyInput = document.getElementById('location-comment-reply-body');
+    const replyCancel = document.getElementById('locationCommentReplyCancel');
+    const replyButtons = detailPanelElement.getElementsByClassName('locationCommentReplyOpen');
+
+    for (let i = 0; i < replyButtons.length; i++) {
+      replyButtons[i].addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        const commentId = this.getAttribute('data-commentid') || '';
+        if (replyForm && locationId) replyForm.setAttribute('action', '/location/' + locationId + '/comment');
+        if (replyParentInput) replyParentInput.value = commentId;
+        if (replyBodyInput) replyBodyInput.value = '';
+        if (replyDialog && replyDialog.showModal) replyDialog.showModal();
+        else if (replyDialog) replyDialog.setAttribute('open', '');
+      });
+    }
+
+    if (replyCancel && replyDialog && replyDialog.close) {
+      replyCancel.addEventListener('click', function () {
+        replyDialog.close();
+      });
+    } else if (replyCancel && replyDialog) {
+      replyCancel.addEventListener('click', function () {
+        replyDialog.removeAttribute('open');
+      });
+    }
   }
 
   function buildTypeOptionsHtml(selectedValue) {
@@ -622,3 +710,4 @@
     return escapeHtml(value);
   }
 }());
+ 
