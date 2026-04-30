@@ -738,11 +738,11 @@ export const createOrJoinLocationTimeSlots = async (locationId, userId, startDat
   let end = parseDateField(endDateTime, 'End time');
   if (end <= start) throw new Error('End time must be after start time');
 
-  const slotMs = 30 * 60 * 1000;
+  const slotMs = 15 * 60 * 1000;
   start = snapDownToSlotBoundary(start, slotMs);
   end = snapUpToSlotBoundary(end, slotMs);
   const diffMs = end.getTime() - start.getTime();
-  if (diffMs <= 0) throw new Error('Time slot range must cover at least one 30 minute slot');
+  if (diffMs <= 0) throw new Error('Time slot range must cover at least one 15 minute slot');
 
   const locationCollection = await location();
   const loc = await getLocationById(locationId);

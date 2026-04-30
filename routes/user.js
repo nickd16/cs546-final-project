@@ -95,7 +95,11 @@ router
       const user = await registerUser(username, password);
 
       // res.status(201).json({ message: 'User registered successfully' });
-      res.status(201).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', success: 'User registered successfully! Now go to login to login.'});
+      const token = await getLoginToken(username, password);
+
+      req.session.token = token; // Using sessions
+      return res.redirect('/?register=success');
+      // res.status(201).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', success: 'User registered successfully! Now go to login to login.'});
     } catch (err) {
       // res.status(500).json({ message: 'Error registering user', error: err.message });
       res.status(500).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', error: 'Error registering user: ' + err.message});
