@@ -439,6 +439,7 @@
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/rating" method="post">';
     html += '<p><label for="rating-score">Score</label><br>';
     html += '<select id="rating-score" name="score" required>';
+    html += '<option value="" disabled selected>Select score</option>'
     html += '<option value="1">1</option>';
     html += '<option value="2">2</option>';
     html += '<option value="3">3</option>';
@@ -501,6 +502,7 @@
       html += '<form action="/location/' + escapeAttribute(location._idStr) + '/update" method="post">';
       html += '<p><label for="edit-location-type">Location type</label><br>';
       html += '<select id="edit-location-type" name="locationType" required>';
+      html += '<option value="" disabled>Select location type</option>';
       html += buildTypeOptionsHtml(location.locationType);
       html += '</select></p>';
       html += '<p><label for="edit-location-name">Location name</label><br><input id="edit-location-name" name="locationName" type="text" value="' + escapeAttribute(location.locationName || '') + '" required></p>';

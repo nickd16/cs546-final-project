@@ -27,8 +27,9 @@
         <section class="locations-sidebar">
             <div class="locations-controls">
                 <label for="location-type-filter">Location type</label>
-                <select id="location-type-filter">
-                    <option value="all" selected>All</option>
+                <select id="location-type-filter" required>
+                    <option value="" disabled>Select location type</option>
+                    <option value="all" selected>All location types</option>
                     <option value="tennis">Tennis</option>
                     <option value="basketball">Basketball</option>
                     <option value="handball">Handball</option>
