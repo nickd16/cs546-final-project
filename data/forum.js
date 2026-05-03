@@ -173,6 +173,13 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       const userOb = await getUserById(comment["userId"].toString());
       comment["isMine"] = comment["userId"].toString() === currentUserIdStr;
       comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
+      let commentDateTimeLabel = '';
+      if (comment.dateTimeCreated instanceof Date) {
+        commentDateTimeLabel = comment.dateTimeCreated.toLocaleString();
+      } else {
+        commentDateTimeLabel = String(comment.dateTimeCreated);
+      }
+      comment["dateTimeLabel"] = commentDateTimeLabel;
       const likedC = emptyIfMissing(comment["likedUserIdList"]);
       const dislikedC = emptyIfMissing(comment["dislikedUserIdList"]);
       comment["likeCount"] = likedC.length;
