@@ -257,6 +257,62 @@ main > * > section {
     font-weight: 700;
 }
 
+#forumNewPostDialog,
+#forumReplyDialog,
+#forumReportDialog,
+#forumCommentReportDialog {
+    max-width: min(34rem, 94vw);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.forumNewPostErrorSlot {
+    height: 1.75rem;
+    max-height: 1.75rem;
+    margin-bottom: 0.35rem;
+    overflow: hidden;
+    line-height: 1.75rem;
+}
+
+.forumNewPostErrorSlot .error {
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Reply and report dialogs: compact strip */
+.forumReplyErrorSlot,
+.forumReportErrorSlot {
+    height: 1.75rem;
+    max-height: 1.75rem;
+    margin-bottom: 0.35rem;
+    overflow: hidden;
+    line-height: 1.75rem;
+}
+
+.forumReplyErrorSlot .error,
+.forumReportErrorSlot .error {
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.forumInlineCommentError {
+    display: none;
+    min-height: 1.35rem;
+    margin: 0 0 0.35rem 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
 .success {
     color: #2d6a20;
     font-weight: 700;

@@ -18,24 +18,62 @@ const errorTextFromCatch = (e, fallback) => {
   return fallback;
 };
 
-router.get('/', authRedirectMW, async (req, res) => {
-  console.log('[forum router GET /] reached — rendering forum page');
+const wantsJsonAjaxRequest = (req) => {
+  const acc = req.get('Accept') || '';
+  if (acc.includes('application/json')) return true;
+  if (req.get('X-Requested-With') === 'XMLHttpRequest') return true;
+  return false;
+};
+
+const forumListQueryHandler = async (req) => {
   let catagoryFilter = 'all';
   if (req.query.catagoryFilter) catagoryFilter = String(req.query.catagoryFilter).trim();
   let qText = '';
   if (req.query.q) qText = String(req.query.q).trim();
   let mine = false;
   if (req.query.mine) mine = true;
-  let isAll = catagoryFilter === 'all';
-  let isTennis = catagoryFilter === 'tennis';
-  let isBasketball = catagoryFilter === 'basketball';
-  let isHandball = catagoryFilter === 'handball';
-  let isHiking = catagoryFilter === 'hiking';
+  const currentUserId = userIdFromSession(req);
+  let onlyUserId = '';
+  if (mine) onlyUserId = currentUserId;
+  const posts = await getAllPostsForDisplay(catagoryFilter, qText, currentUserId, onlyUserId);
+  const isAll = catagoryFilter === 'all';
+  const isTennis = catagoryFilter === 'tennis';
+  const isBasketball = catagoryFilter === 'basketball';
+  const isHandball = catagoryFilter === 'handball';
+  const isHiking = catagoryFilter === 'hiking';
+  return { posts, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine };
+};
+
+router.get('/list-fragment', authRedirectMW, async (req, res) => {
   try {
-    const currentUserId = userIdFromSession(req);
-    let onlyUserId = '';
-    if (mine) onlyUserId = currentUserId;
-    const posts = await getAllPostsForDisplay(catagoryFilter, qText, currentUserId, onlyUserId); // Change this for comment rendering
+    const { posts } = await forumListQueryHandler(req);
+    return res.render('partials/forumPostsSection', { layout: false, posts });
+  } catch (e) {
+    return res.status(500).type('html').send('<p class="error">Could not load posts</p>');
+  }
+});
+
+router.get('/', authRedirectMW, async (req, res) => {
+  console.log('[forum router GET /] reached — rendering forum page');
+  let catagoryFilter = 'all';
+  let qText = '';
+  let mine = false;
+  let isAll = true;
+  let isTennis = false;
+  let isBasketball = false;
+  let isHandball = false;
+  let isHiking = false;
+  try {
+    const data = await forumListQueryHandler(req);
+    catagoryFilter = data.catagoryFilter;
+    qText = data.qText;
+    mine = data.mine;
+    isAll = data.isAll;
+    isTennis = data.isTennis;
+    isBasketball = data.isBasketball;
+    isHandball = data.isHandball;
+    isHiking = data.isHiking;
+    const posts = data.posts;
     let error = null;
     if (req.query.error) error = String(req.query.error);
     res.render('forum', { layout: 'main.handlebars', title: "Forum", "loggedIn": req.user, posts, error, catagoryFilter, qText, isAll, isTennis, isBasketball, isHandball, isHiking, mine });
@@ -73,23 +111,39 @@ router.post('/:postId/comment/:commentId/delete', authRedirectMW, async (req, re
 
 router.post('/:postId/comment/:commentId/report', authRedirectMW, async (req, res) => {
   try {
-    const { reason, description } = req.body;
+    const b = req.body || {};
+    const { reason, description } = b;
     await createForumCommentReport(userIdFromSession(req), req.params.postId, req.params.commentId, reason, description);
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not submit report')));
+    const msg = errorTextFromCatch(e, 'Could not submit report');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 
 router.post('/:postId/comment', authRedirectMW, async (req, res) => {
   try {
+    const b = req.body || {};
     let parentId = '';
-    if (req.body.parentId) parentId = String(req.body.parentId).trim();
-    const body = req.body.body;
+    if (b.parentId) parentId = String(b.parentId).trim();
+    const body = b.body;
     await addCommentToPost(req.params.postId, userIdFromSession(req), body, parentId);
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not add comment')));
+    const msg = errorTextFromCatch(e, 'Could not add comment');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 
@@ -122,11 +176,19 @@ router.post('/:postId/delete', authRedirectMW, async (req, res) => {
 
 router.post('/:postId/report', authRedirectMW, async (req, res) => {
   try {
-    const { reason, description } = req.body;
+    const b = req.body || {};
+    const { reason, description } = b;
     await createForumPostReport(userIdFromSession(req), req.params.postId, reason, description);
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not submit report')));
+    const msg = errorTextFromCatch(e, 'Could not submit report');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 

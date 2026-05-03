@@ -6,13 +6,15 @@ import { getUserById } from './user.js';
 const FORUM_CATEGORIES = ['all', 'tennis', 'basketball', 'handball', 'hiking'];
 
 const validateCategory = (cat) => {
-  if (typeof cat !== 'string' || !FORUM_CATEGORIES.includes(cat.trim())) throw new Error('Invalid forum category');
-  return cat.trim();
+  if (typeof cat !== 'string' || !String(cat).trim()) throw new Error('Error: Select a category,');
+  const t = cat.trim();
+  if (!FORUM_CATEGORIES.includes(t)) throw new Error('Invalid forum category');
+  return t;
 };
 
 const validateTitleAndBody = (title, body) => {
-  if (typeof title !== 'string' || !title.trim()) throw new Error('Title is required');
-  if (typeof body !== 'string' || !body.trim()) throw new Error('Post body is required');
+  if (typeof title !== 'string' || !title.trim()) throw new Error('Error: Enter a title,');
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Error: Enter a body,');
   if (title.trim().length > 200) throw new Error('Title is too long');
   if (body.trim().length > 10000) throw new Error('Post body is too long');
   return [title.trim(), body.trim()];
@@ -52,7 +54,12 @@ const getChildComments = async (processedCommentList, pId) => {
   return childCommentList;
 };
 const getCommentTree = async (processedCommentList, pId) => {
-  let commentTree = processedCommentList.filter((comment) => pId == null || comment["parentId"] == null ? comment["parentId"] == pId : comment["parentId"].toString() == pId.toString());
+  let commentTree = processedCommentList.filter((comment) => {
+    if (pId == null || comment["parentId"] == null) {
+      return comment["parentId"] == pId;
+    }
+    return comment["parentId"].toString() == pId.toString();
+  });
 
   for (let comment of commentTree) {
     comment["childrenCommentList"] = await getChildComments(processedCommentList, comment["_id"]);
@@ -286,7 +293,7 @@ export const toggleDislikePost = async (postId, userId) => {
 };
 
 const validateCommentBody = (body) => {
-  if (typeof body !== 'string' || !body.trim()) throw new Error('Comment body is required');
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Error: Enter a comment,');
   if (body.trim().length > 5000) throw new Error('Comment is too long');
   return body.trim();
 };

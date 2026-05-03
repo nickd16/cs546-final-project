@@ -21,11 +21,11 @@ export const createForumPostReport = async (reporterUserId, postId, reason, desc
 
   reason = normalizeString(reason);
   description = normalizeString(description);
-  if (!reason) throw new Error('Report reason is required');
+  if (!reason) throw new Error('Error: Select a reason,');
   if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
     throw new Error('Invalid report reason');
   }
-  if (reason === 'other' && !description) throw new Error('Description is required for "other"');
+  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
   if (description.length > 2000) throw new Error('Description too long');
 
   const forumCollection = await forum();
@@ -68,11 +68,11 @@ export const createForumCommentReport = async (reporterUserId, postId, commentId
 
   reason = normalizeString(reason);
   description = normalizeString(description);
-  if (!reason) throw new Error('Report reason is required');
+  if (!reason) throw new Error('Error: Select a reason,');
   if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
     throw new Error('Invalid report reason');
   }
-  if (reason === 'other' && !description) throw new Error('Description is required for "other"');
+  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
   if (description.length > 2000) throw new Error('Description too long');
 
   const forumCollection = await forum();

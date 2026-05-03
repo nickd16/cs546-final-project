@@ -11,7 +11,7 @@
         <a href="/forum">All posts</a>
     </p>
 
-    <form method="get" action="/forum">
+    <form id="forumFilterForm" method="get" action="/forum">
         {{#if mine}}<input type="hidden" name="mine" value="1">{{/if}}
         <p>Filter:</p>
         <select name="catagoryFilter">
@@ -24,68 +24,28 @@
         <p>Search:</p>
         <input type="text" name="q" value="{{qText}}">
         <p>
-            <button type="submit">Apply</button>
+            <button type="submit" id="forumFilterApply">Apply</button>
             <a href="/forum">Clear</a>
         </p>
     </form>
 
-    <h2>Posts</h2>
-    {{#if posts.length}}
-    <ul>
-        {{#each posts}}
-        <li>
-            <p><strong>{{catagory}}</strong> — {{dateTimeLabel}}</p>
-            <h3>{{title}}</h3>
-            <p>By {{authorUsername}}</p>
-            <p>{{body}}</p>
-            <div>
-                <form action="/forum/{{_idStr}}/like" method="post">
-                    <button type="submit">Like ({{likeCount}})</button>
-                </form>
-                <form action="/forum/{{_idStr}}/dislike" method="post">
-                    <button type="submit">Dislike ({{dislikeCount}})</button>
-                </form>
-                {{#if isMine}}
-                <form action="/forum/{{_idStr}}/delete" method="post">
-                    <button type="submit">Delete</button>
-                </form>
-                {{/if}}
-                <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
-            </div>
-            <p>Comments:</p>
-            <form action="/forum/{{_idStr}}/comment" method="post">
-                <input type="hidden" name="parentId" value="">
-                <div>
-                    <label for="forum-new-comment-{{_idStr}}">Add a comment</label><br>
-                    <textarea id="forum-new-comment-{{_idStr}}" name="body" rows="3" maxlength="5000" required></textarea>
-                </div>
-                <div><button type="submit">Post comment</button></div>
-            </form>
-
-            <div class="commentTree">
-                {{#each commentTree}}
-                    {{> comment}}
-                {{/each}}
-            </div>
-
-            <hr>
-        </li>
-        {{/each}}
-    </ul>
-    {{else}}
-    <p>No posts yet.</p>
-    {{/if}}
+    <div id="forumPostsSection">
+    {{> forumPostsSection}}
+    </div>
 
     <dialog id="forumNewPostDialog">
         <h2>New post</h2>
-        <form action="/forum" method="post">
+        <form id="forumNewPostForm" action="/forum" method="post">
+            <div class="forumNewPostErrorSlot" aria-live="polite">
+                <p id="forumNewPostErrors" class="error" role="alert"></p>
+            </div>
             <div>
                 <label for="forum-title">Title</label><br>
-                <input id="forum-title" name="title" type="text" maxlength="200" required>
+                <input id="forum-title" name="title" type="text" maxlength="200">
             </div>
             <div>
                 <label for="forum-category">Category</label><br>
-                <select id="forum-category" name="catagory" required>
+                <select id="forum-category" name="catagory">
                     <option value="" disabled selected>Select forum type</option>
                     <option value="all">All</option>
                     <option value="tennis">Tennis</option>
@@ -96,7 +56,7 @@
             </div>
             <div>
                 <label for="forum-body">Body</label><br>
-                <textarea id="forum-body" name="body" rows="6" maxlength="10000" required></textarea>
+                <textarea id="forum-body" name="body" rows="6" maxlength="10000"></textarea>
             </div>
             <div>
                 <button type="submit">Post</button>
@@ -109,9 +69,12 @@
         <h2>Reply</h2>
         <form id="forumReplyForm" action="/forum/POST_ID/comment" method="post">
             <input type="hidden" name="parentId" id="forum-reply-parentid" value="">
+            <div class="forumReplyErrorSlot" aria-live="polite">
+                <p id="forumReplyErrors" class="error" role="alert"></p>
+            </div>
             <div>
                 <label for="forum-reply-body">Your reply</label><br>
-                <textarea id="forum-reply-body" name="body" rows="4" maxlength="5000" required></textarea>
+                <textarea id="forum-reply-body" name="body" rows="4" maxlength="5000"></textarea>
             </div>
             <div>
                 <button type="submit">Reply</button>
@@ -123,9 +86,12 @@
     <dialog id="forumCommentReportDialog">
         <h2>Report comment</h2>
         <form id="forumCommentReportForm" action="/forum/POST_ID/comment/COMMENT_ID/report" method="post">
+            <div class="forumReportErrorSlot" aria-live="polite">
+                <p id="forumCommentReportErrors" class="error" role="alert"></p>
+            </div>
             <div>
-                <label for="forum-comment-report-reason">Why are you reporting?</label><br>
-                <select id="forum-comment-report-reason" name="reason" required>
+                <label for="forum-comment-report-reason">Reason for report</label><br>
+                <select id="forum-comment-report-reason" name="reason">
                     <option value="" disabled selected>Select reason</option>
                     <option value="spam">Spam</option>
                     <option value="harassment">Harassment</option>
@@ -148,9 +114,12 @@
     <dialog id="forumReportDialog">
         <h2>Report</h2>
         <form id="forumReportForm" action="/forum/POST_ID/report" method="post">
+            <div class="forumReportErrorSlot" aria-live="polite">
+                <p id="forumReportErrors" class="error" role="alert"></p>
+            </div>
             <div>
-                <label for="forum-report-reason">Why are you reporting?</label><br>
-                <select id="forum-report-reason" name="reason" required>
+                <label for="forum-report-reason">Reason for report</label><br>
+                <select id="forum-report-reason" name="reason">
                     <option value="" disabled selected>Select reason</option>
                     <option value="spam">Spam</option>
                     <option value="harassment">Harassment</option>
@@ -175,59 +144,323 @@
       var dlg = document.getElementById('forumNewPostDialog');
       var openBtn = document.getElementById('forumNewPostOpen');
       var cancelBtn = document.getElementById('forumNewPostCancel');
-      if (openBtn && dlg && dlg.showModal) openBtn.addEventListener('click', function () { dlg.showModal(); });
-      else if (openBtn && dlg) openBtn.addEventListener('click', function () { dlg.setAttribute('open', ''); });
-      if (cancelBtn && dlg && dlg.close) cancelBtn.addEventListener('click', function () { dlg.close(); });
-      else if (cancelBtn && dlg) cancelBtn.addEventListener('click', function () { dlg.removeAttribute('open'); });
+      var newPostForm = document.getElementById('forumNewPostForm');
+      var newPostErr = document.getElementById('forumNewPostErrors');
+
+      function resetNewPostForm() {
+        var titleEl = document.getElementById('forum-title');
+        var catEl = document.getElementById('forum-category');
+        var bodyEl = document.getElementById('forum-body');
+        var errEl = document.getElementById('forumNewPostErrors');
+        if (titleEl) titleEl.value = '';
+        if (bodyEl) bodyEl.value = '';
+        if (catEl) catEl.selectedIndex = 0;
+        if (errEl) errEl.textContent = '';
+      }
+
+      if (openBtn && dlg) {
+        openBtn.addEventListener('click', function () {
+          resetNewPostForm();
+          if (dlg.showModal) dlg.showModal();
+          else dlg.setAttribute('open', '');
+        });
+      }
+      if (cancelBtn && dlg) {
+        cancelBtn.addEventListener('click', function () {
+          resetNewPostForm();
+          if (dlg.close) dlg.close();
+          else dlg.removeAttribute('open');
+        });
+      }
+
+      if (newPostForm && newPostErr) {
+        newPostForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          newPostErr.textContent = '';
+          var titleEl = document.getElementById('forum-title');
+          var catEl = document.getElementById('forum-category');
+          var bodyEl = document.getElementById('forum-body');
+          var title = '';
+          if (titleEl && titleEl.value) title = titleEl.value.trim();
+          var cat = '';
+          if (catEl && catEl.value) cat = String(catEl.value).trim();
+          var body = '';
+          if (bodyEl && bodyEl.value) body = bodyEl.value.trim();
+          var errs = [];
+          if (!title) errs.push('Error: Enter a title,');
+          if (!cat) errs.push('Error: Select a category,');
+          if (!body) errs.push('Error: Enter a body,');
+          if (errs.length) {
+            newPostErr.textContent = errs.join(' ');
+            return;
+          }
+          HTMLFormElement.prototype.submit.call(newPostForm);
+        });
+      }
+
+      var replyErrEl = document.getElementById('forumReplyErrors');
+      var replyDlg = document.getElementById('forumReplyDialog');
+
+      function forumRefreshPostsFromCurrentFilter(skipPushState) {
+        var section = document.getElementById('forumPostsSection');
+        var filterForm = document.getElementById('forumFilterForm');
+        if (!section) return Promise.resolve();
+        var params = filterForm ? new URLSearchParams(new FormData(filterForm)) : new URLSearchParams();
+        var qs = params.toString();
+        var url = '/forum/list-fragment';
+        if (qs) url = url + '?' + qs;
+        return fetch(url, { credentials: 'same-origin' })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Could not load posts');
+            return res.text();
+          })
+          .then(function (html) {
+            section.innerHTML = html;
+            if (!skipPushState && window.history && window.history.pushState && filterForm) {
+              var loc = '/forum';
+              if (qs) loc = loc + '?' + qs;
+              window.history.pushState({}, '', loc);
+            }
+          });
+      }
+
+
+      function forumPostFormAsUrlEncodedJson(form, defaultGenericMsg) {
+        var gen = defaultGenericMsg || 'Request failed';
+        var action = form.getAttribute('action') || '';
+        return fetch(action, {
+          method: 'POST',
+          body: new URLSearchParams(new FormData(form)).toString(),
+          credentials: 'same-origin',
+          headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          }
+        }).then(function (res) {
+          var ct = res.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            return res.text().then(function () {
+              throw new Error(gen);
+            });
+          }
+          return res.json().then(function (data) {
+            if (!res.ok) {
+              var msg = data && data.error ? String(data.error) : gen;
+              throw new Error(msg);
+            }
+            return data;
+          });
+        });
+      }
+
+      function clearForumPostReportForm() {
+        var sel = document.getElementById('forum-report-reason');
+        var desc = document.getElementById('forum-report-description');
+        var err = document.getElementById('forumReportErrors');
+        if (sel) sel.selectedIndex = 0;
+        if (desc) desc.value = '';
+        if (err) err.textContent = '';
+      }
+
+      function clearForumCommentReportForm() {
+        var sel = document.getElementById('forum-comment-report-reason');
+        var desc = document.getElementById('forum-comment-report-description');
+        var err = document.getElementById('forumCommentReportErrors');
+        if (sel) sel.selectedIndex = 0;
+        if (desc) desc.value = '';
+        if (err) err.textContent = '';
+      }
+
+      document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.id === 'forumReportForm') {
+          e.preventDefault();
+          var reasonEl = document.getElementById('forum-report-reason');
+          var descEl = document.getElementById('forum-report-description');
+          var errEl = document.getElementById('forumReportErrors');
+          var reportDlgEl = document.getElementById('forumReportDialog');
+          var reason = '';
+          if (reasonEl && reasonEl.value) reason = String(reasonEl.value).trim();
+          var desc = '';
+          if (descEl && descEl.value) desc = descEl.value.trim();
+          if (errEl) errEl.textContent = '';
+          if (!reason) {
+            if (errEl) errEl.textContent = 'Error: Select a reason,';
+            return;
+          }
+          if (reason === 'other' && !desc) {
+            if (errEl) errEl.textContent = 'Error: Enter a description,';
+            return;
+          }
+          forumPostFormAsUrlEncodedJson(form, 'Could not submit report')
+            .then(function () {
+              clearForumPostReportForm();
+              if (reportDlgEl && reportDlgEl.close) reportDlgEl.close();
+              else if (reportDlgEl) reportDlgEl.removeAttribute('open');
+            })
+            .catch(function (err) {
+              if (errEl) errEl.textContent = err && err.message ? err.message : 'Could not submit report';
+            });
+          return;
+        }
+        if (form.id === 'forumCommentReportForm') {
+          e.preventDefault();
+          var reasonEl2 = document.getElementById('forum-comment-report-reason');
+          var descEl2 = document.getElementById('forum-comment-report-description');
+          var errEl2 = document.getElementById('forumCommentReportErrors');
+          var commentReportDlgEl = document.getElementById('forumCommentReportDialog');
+          var reason2 = '';
+          if (reasonEl2 && reasonEl2.value) reason2 = String(reasonEl2.value).trim();
+          var desc2 = '';
+          if (descEl2 && descEl2.value) desc2 = descEl2.value.trim();
+          if (errEl2) errEl2.textContent = '';
+          if (!reason2) {
+            if (errEl2) errEl2.textContent = 'Error: Select a reason,';
+            return;
+          }
+          if (reason2 === 'other' && !desc2) {
+            if (errEl2) errEl2.textContent = 'Error: Enter a description,';
+            return;
+          }
+          forumPostFormAsUrlEncodedJson(form, 'Could not submit report')
+            .then(function () {
+              clearForumCommentReportForm();
+              if (commentReportDlgEl && commentReportDlgEl.close) commentReportDlgEl.close();
+              else if (commentReportDlgEl) commentReportDlgEl.removeAttribute('open');
+            })
+            .catch(function (err) {
+              if (errEl2) errEl2.textContent = err && err.message ? err.message : 'Could not submit report';
+            });
+          return;
+        }
+        if (form.id === 'forumReplyForm') {
+          e.preventDefault();
+          var ta = document.getElementById('forum-reply-body');
+          var v = '';
+          if (ta && ta.value) v = ta.value.trim();
+          if (!v) {
+            if (replyErrEl) replyErrEl.textContent = 'Error: Enter a reply,';
+            return;
+          }
+          if (replyErrEl) replyErrEl.textContent = '';
+          forumPostFormAsUrlEncodedJson(form, 'Could not add comment')
+            .then(function () {
+              if (ta) ta.value = '';
+              if (replyDlg && replyDlg.close) replyDlg.close();
+              else if (replyDlg) replyDlg.removeAttribute('open');
+              return forumRefreshPostsFromCurrentFilter(true);
+            })
+            .catch(function (err) {
+              if (replyErrEl) {
+                replyErrEl.textContent = err && err.message ? err.message : 'Could not add reply';
+              }
+            });
+          return;
+        }
+        if (form.classList.contains('forumPostTopCommentForm')) {
+          e.preventDefault();
+          var errP = form.querySelector('.forumInlineCommentError');
+          var ta2 = form.querySelector('textarea[name="body"]');
+          var v2 = '';
+          if (ta2 && ta2.value) v2 = ta2.value.trim();
+          if (!v2) {
+            if (errP) {
+              errP.textContent = 'Error: Enter a comment,';
+              errP.style.display = 'block';
+            }
+            return;
+          }
+          if (errP) {
+            errP.textContent = '';
+            errP.style.display = 'none';
+          }
+          forumPostFormAsUrlEncodedJson(form, 'Could not add comment')
+            .then(function () {
+              if (ta2) ta2.value = '';
+              return forumRefreshPostsFromCurrentFilter(true);
+            })
+            .catch(function (err) {
+              if (errP) {
+                errP.textContent = err && err.message ? err.message : 'Could not add comment';
+                errP.style.display = 'block';
+              }
+            });
+        }
+      });
 
       var reportDlg = document.getElementById('forumReportDialog');
       var reportForm = document.getElementById('forumReportForm');
       var reportCancel = document.getElementById('forumReportCancel');
-      var reportButtons = document.getElementsByClassName('forumReportOpen');
-      for (var i = 0; i < reportButtons.length; i++) {
-        reportButtons[i].addEventListener('click', function (e) {
-          var postId = this.getAttribute('data-postid');
-          if (reportForm && postId) reportForm.setAttribute('action', '/forum/' + postId + '/report');
-          if (reportDlg && reportDlg.showModal) reportDlg.showModal();
-          else if (reportDlg) reportDlg.setAttribute('open', '');
-        });
-      }
-      if (reportCancel && reportDlg && reportDlg.close) reportCancel.addEventListener('click', function () { reportDlg.close(); });
-      else if (reportCancel && reportDlg) reportCancel.addEventListener('click', function () { reportDlg.removeAttribute('open'); });
-
-      var replyDlg = document.getElementById('forumReplyDialog');
       var replyForm = document.getElementById('forumReplyForm');
       var replyParentInput = document.getElementById('forum-reply-parentid');
       var replyCancel = document.getElementById('forumReplyCancel');
-      var replyButtons = document.getElementsByClassName('forumReplyOpen');
-      for (var r = 0; r < replyButtons.length; r++) {
-        replyButtons[r].addEventListener('click', function () {
-          var pid = this.getAttribute('data-postid');
-          var cid = this.getAttribute('data-commentid');
+      var commentReportDlg = document.getElementById('forumCommentReportDialog');
+      var commentReportForm = document.getElementById('forumCommentReportForm');
+      var commentReportCancel = document.getElementById('forumCommentReportCancel');
+
+      document.addEventListener('click', function (e) {
+        var el = e.target;
+        if (!(el instanceof Element)) return;
+        var repBtn = el.closest('.forumReportOpen');
+        if (repBtn) {
+          clearForumPostReportForm();
+          var postId = repBtn.getAttribute('data-postid');
+          if (reportForm && postId) reportForm.setAttribute('action', '/forum/' + postId + '/report');
+          if (reportDlg && reportDlg.showModal) reportDlg.showModal();
+          else if (reportDlg) reportDlg.setAttribute('open', '');
+          return;
+        }
+        var replyBtn = el.closest('.forumReplyOpen');
+        if (replyBtn) {
+          var pid = replyBtn.getAttribute('data-postid');
+          var cid = replyBtn.getAttribute('data-commentid');
+          if (replyErrEl) replyErrEl.textContent = '';
           if (replyForm && pid) replyForm.setAttribute('action', '/forum/' + pid + '/comment');
           if (replyParentInput && cid) replyParentInput.value = cid;
           if (replyDlg && replyDlg.showModal) replyDlg.showModal();
           else if (replyDlg) replyDlg.setAttribute('open', '');
+          return;
+        }
+        var crBtn = el.closest('.forumCommentReportOpen');
+        if (crBtn) {
+          clearForumCommentReportForm();
+          var cpid = crBtn.getAttribute('data-postid');
+          var ccid = crBtn.getAttribute('data-commentid');
+          if (commentReportForm && cpid && ccid) commentReportForm.setAttribute('action', '/forum/' + cpid + '/comment/' + ccid + '/report');
+          if (commentReportDlg && commentReportDlg.showModal) commentReportDlg.showModal();
+          else if (commentReportDlg) commentReportDlg.setAttribute('open', '');
+        }
+      });
+
+      if (reportCancel && reportDlg) {
+        reportCancel.addEventListener('click', function () {
+          clearForumPostReportForm();
+          if (reportDlg.close) reportDlg.close();
+          else reportDlg.removeAttribute('open');
         });
       }
       if (replyCancel && replyDlg && replyDlg.close) replyCancel.addEventListener('click', function () { replyDlg.close(); });
       else if (replyCancel && replyDlg) replyCancel.addEventListener('click', function () { replyDlg.removeAttribute('open'); });
-
-      var commentReportDlg = document.getElementById('forumCommentReportDialog');
-      var commentReportForm = document.getElementById('forumCommentReportForm');
-      var commentReportCancel = document.getElementById('forumCommentReportCancel');
-      var commentReportButtons = document.getElementsByClassName('forumCommentReportOpen');
-      for (var c = 0; c < commentReportButtons.length; c++) {
-        commentReportButtons[c].addEventListener('click', function () {
-          var pid = this.getAttribute('data-postid');
-          var cid = this.getAttribute('data-commentid');
-          if (commentReportForm && pid && cid) commentReportForm.setAttribute('action', '/forum/' + pid + '/comment/' + cid + '/report');
-          if (commentReportDlg && commentReportDlg.showModal) commentReportDlg.showModal();
-          else if (commentReportDlg) commentReportDlg.setAttribute('open', '');
+      if (commentReportCancel && commentReportDlg) {
+        commentReportCancel.addEventListener('click', function () {
+          clearForumCommentReportForm();
+          if (commentReportDlg.close) commentReportDlg.close();
+          else commentReportDlg.removeAttribute('open');
         });
       }
-      if (commentReportCancel && commentReportDlg && commentReportDlg.close) commentReportCancel.addEventListener('click', function () { commentReportDlg.close(); });
-      else if (commentReportCancel && commentReportDlg) commentReportCancel.addEventListener('click', function () { commentReportDlg.removeAttribute('open'); });
+
+      var forumFilterForm = document.getElementById('forumFilterForm');
+      var forumPostsSection = document.getElementById('forumPostsSection');
+      if (forumFilterForm && forumPostsSection) {
+        forumFilterForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          forumRefreshPostsFromCurrentFilter(false).catch(function () {
+            forumPostsSection.innerHTML = '<p class="error">Could not load posts</p>';
+          });
+        });
+      }
     })();
     </script>
 </div>

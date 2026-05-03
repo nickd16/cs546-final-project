@@ -1,0 +1,47 @@
+<h2>Posts</h2>
+{{#if posts.length}}
+<ul>
+    {{#each posts}}
+    <li>
+        <p><strong>{{catagory}}</strong> — {{dateTimeLabel}}</p>
+        <h3>{{title}}</h3>
+        <p>By {{authorUsername}}</p>
+        <p>{{body}}</p>
+        <div>
+            <form action="/forum/{{_idStr}}/like" method="post">
+                <button type="submit">Like ({{likeCount}})</button>
+            </form>
+            <form action="/forum/{{_idStr}}/dislike" method="post">
+                <button type="submit">Dislike ({{dislikeCount}})</button>
+            </form>
+            {{#if isMine}}
+            <form action="/forum/{{_idStr}}/delete" method="post">
+                <button type="submit">Delete</button>
+            </form>
+            {{/if}}
+            <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
+        </div>
+        <p>Comments:</p>
+        <form class="forumPostTopCommentForm" action="/forum/{{_idStr}}/comment" method="post">
+            <input type="hidden" name="parentId" value="">
+            <p class="error forumInlineCommentError" role="alert"></p>
+            <div>
+                <label for="forum-new-comment-{{_idStr}}">Add a comment</label><br>
+                <textarea id="forum-new-comment-{{_idStr}}" name="body" rows="3" maxlength="5000"></textarea>
+            </div>
+            <div><button type="submit">Post comment</button></div>
+        </form>
+
+        <div class="commentTree">
+            {{#each commentTree}}
+                {{> comment}}
+            {{/each}}
+        </div>
+
+        <hr>
+    </li>
+    {{/each}}
+</ul>
+{{else}}
+<p>No posts yet.</p>
+{{/if}}
