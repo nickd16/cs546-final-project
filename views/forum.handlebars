@@ -4,6 +4,7 @@
     {{#if error}}
     <p class="error">{{error}}</p>
     {{/if}}
+    <p id="forumAjaxActionError" class="error" role="alert" aria-live="polite" style="display:none"></p>
 
     <p>
         <button type="button" id="forumNewPostOpen">New post</button>
@@ -272,9 +273,40 @@
         if (err) err.textContent = '';
       }
 
+      function isForumLikeDislikeForm(form) {
+        if (!form || String(form.method || '').toLowerCase() !== 'post') return false;
+        var a = form.getAttribute('action') || '';
+        if (/\/forum\/[^/]+\/comment\/[^/]+\/(like|dislike)$/.test(a)) return true;
+        if (/\/forum\/[^/]+\/(like|dislike)$/.test(a)) return true;
+        return false;
+      }
+
       document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!(form instanceof HTMLFormElement)) return;
+        if (isForumLikeDislikeForm(form)) {
+          e.preventDefault();
+          var voteFlash = document.getElementById('forumAjaxActionError');
+          if (voteFlash) {
+            voteFlash.textContent = '';
+            voteFlash.style.display = 'none';
+          }
+          forumPostFormAsUrlEncodedJson(form, 'Could not update vote')
+            .then(function () {
+              if (voteFlash) {
+                voteFlash.textContent = '';
+                voteFlash.style.display = 'none';
+              }
+              return forumRefreshPostsFromCurrentFilter(true);
+            })
+            .catch(function (err) {
+              if (voteFlash) {
+                voteFlash.textContent = err && err.message ? err.message : 'Could not update vote';
+                voteFlash.style.display = 'block';
+              }
+            });
+          return;
+        }
         if (form.id === 'forumReportForm') {
           e.preventDefault();
           var reasonEl = document.getElementById('forum-report-reason');

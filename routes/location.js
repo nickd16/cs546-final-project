@@ -8,6 +8,8 @@ import {
   createOrJoinLocationTimeSlots,
   deleteLocationById,
   deleteLocationCommentByUser,
+  toggleLikeLocationComment,
+  toggleDislikeLocationComment,
   getFavoriteLocations,
   getLocationDetailsForDisplay,
   getNearbyLocationsForMap,
@@ -179,6 +181,24 @@ router.post('/:locationId/comment/:commentId/delete', authRedirectMW, async (req
     return locationPageRedirect(res, req.params.locationId, '', 'Comment removed');
   } catch (e) {
     return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not remove comment'), '');
+  }
+});
+
+router.post('/:locationId/comment/:commentId/like', authRedirectMW, async (req, res) => {
+  try {
+    await toggleLikeLocationComment(req.params.locationId, req.params.commentId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', '');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update like'), '');
+  }
+});
+
+router.post('/:locationId/comment/:commentId/dislike', authRedirectMW, async (req, res) => {
+  try {
+    await toggleDislikeLocationComment(req.params.locationId, req.params.commentId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', '');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update dislike'), '');
   }
 });
 

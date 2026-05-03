@@ -85,18 +85,32 @@ router.get('/', authRedirectMW, async (req, res) => {
 router.post('/:postId/comment/:commentId/like', authRedirectMW, async (req, res) => {
   try {
     await toggleLikeComment(req.params.postId, req.params.commentId, userIdFromSession(req));
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not update like')));
+    const msg = errorTextFromCatch(e, 'Could not update like');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 
 router.post('/:postId/comment/:commentId/dislike', authRedirectMW, async (req, res) => {
   try {
     await toggleDislikeComment(req.params.postId, req.params.commentId, userIdFromSession(req));
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not update dislike')));
+    const msg = errorTextFromCatch(e, 'Could not update dislike');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 
@@ -150,18 +164,32 @@ router.post('/:postId/comment', authRedirectMW, async (req, res) => {
 router.post('/:postId/like', authRedirectMW, async (req, res) => {
   try {
     await toggleLikePost(req.params.postId, userIdFromSession(req));
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not update like')));
+    const msg = errorTextFromCatch(e, 'Could not update like');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 
 router.post('/:postId/dislike', authRedirectMW, async (req, res) => {
   try {
     await toggleDislikePost(req.params.postId, userIdFromSession(req));
+    if (wantsJsonAjaxRequest(req)) {
+      return res.json({ ok: true });
+    }
     return res.redirect(303, '/forum');
   } catch (e) {
-    return res.redirect(303, '/forum?error=' + encodeURIComponent(errorTextFromCatch(e, 'Could not update dislike')));
+    const msg = errorTextFromCatch(e, 'Could not update dislike');
+    if (wantsJsonAjaxRequest(req)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.redirect(303, '/forum?error=' + encodeURIComponent(msg));
   }
 });
 
