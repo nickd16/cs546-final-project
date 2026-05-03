@@ -30,6 +30,24 @@ const emptyIfMissing = (arr) => {
   return arr;
 };
 
+const buildForumDateDisplay = (value) => {
+  let dateTimeISO = '';
+  let dateTimeLabel = '';
+  if (value instanceof Date) {
+    dateTimeISO = value.toISOString();
+    dateTimeLabel = value.toLocaleString();
+  } else if (value) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      dateTimeISO = parsed.toISOString();
+      dateTimeLabel = parsed.toLocaleString();
+    } else {
+      dateTimeLabel = String(value);
+    }
+  }
+  return { dateTimeISO, dateTimeLabel };
+};
+
 export const getPostById = async (id) => {
   id = await validateIdField(id);
   const forumCollection = await forum();
@@ -152,14 +170,9 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
     let authorUsername = userMap[key];
     if (authorUsername === undefined || authorUsername === null) authorUsername = 'Unknown';
 
-    let dateTimeISO = '';
-    let dateTimeLabel = '';
-    if (p.dateTimeCreated instanceof Date) {
-      dateTimeISO = p.dateTimeCreated.toISOString();
-      dateTimeLabel = p.dateTimeCreated.toLocaleString();
-    } else {
-      dateTimeLabel = String(p.dateTimeCreated);
-    }
+    const postDates = buildForumDateDisplay(p.dateTimeCreated);
+    const dateTimeISO = postDates.dateTimeISO;
+    const dateTimeLabel = postDates.dateTimeLabel;
 
     const liked = emptyIfMissing(p.likedUserIdList);
     const disliked = emptyIfMissing(p.dislikedUserIdList);
@@ -180,13 +193,9 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       const userOb = await getUserById(comment["userId"].toString());
       comment["isMine"] = comment["userId"].toString() === currentUserIdStr;
       comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
-      let commentDateTimeLabel = '';
-      if (comment.dateTimeCreated instanceof Date) {
-        commentDateTimeLabel = comment.dateTimeCreated.toLocaleString();
-      } else {
-        commentDateTimeLabel = String(comment.dateTimeCreated);
-      }
-      comment["dateTimeLabel"] = commentDateTimeLabel;
+      const commentDates = buildForumDateDisplay(comment.dateTimeCreated);
+      comment["dateTimeLabel"] = commentDates.dateTimeLabel;
+      comment["dateTimeISO"] = commentDates.dateTimeISO;
       const likedC = emptyIfMissing(comment["likedUserIdList"]);
       const dislikedC = emptyIfMissing(comment["dislikedUserIdList"]);
       comment["likeCount"] = likedC.length;
