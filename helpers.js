@@ -4,7 +4,7 @@ import {user} from './config/mongoCollections.js'
 import { ObjectId } from 'mongodb';
 
 export const checkDupUsername = async (username) => {
-    await validateUsernameField(username);
+    username = await validateUsernameField(username);
 
     const userCollection = await user();
     // Check for duplicate usernames
@@ -16,7 +16,7 @@ export const checkDupUsername = async (username) => {
 };
 
 export const usernameExists = async (username) => {
-    await validateUsernameField(username);
+    username = await validateUsernameField(username);
 
     const userCollection = await user();
     // Check for duplicate usernames
@@ -29,9 +29,9 @@ export const usernameExists = async (username) => {
 };
 
 export const passwordMatchesHash = async (username, password) => {
-    await validateUsernameField(username);
+    username = await validateUsernameField(username);
 
-    await validatePasswordField(password);
+    password = await validatePasswordField(password);
 
     const userCollection = await user();
     const user1 = await userCollection.findOne({ username: username });
@@ -53,7 +53,7 @@ export const validateUsernameField = async (username) => { // We can keep these 
     if (!(trimmedUsername.length <= 32)) { // Usernames must be less or equal to 32 characters
         throw Error("Username is greater then 32 characters!");
     }
-    return trimmedUsername;
+    return trimmedUsername.toLowerCase();
 };
 
 export const validatePasswordField = async (password) => {
