@@ -601,6 +601,12 @@
       html += '<p>' + escapeHtml(comment.body || '') + '</p>';
       html += '<p>' + escapeHtml(comment.dateTimeLabel || '') + '</p>';
       html += '<div class="location-comment-actions">';
+      html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/like" method="post">';
+      html += '<button type="submit">Like (' + escapeHtml(String(comment.likeCount || 0)) + ')</button>';
+      html += '</form>';
+      html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/dislike" method="post">';
+      html += '<button type="submit">Dislike (' + escapeHtml(String(comment.dislikeCount || 0)) + ')</button>';
+      html += '</form>';
       html += '<button type="button" class="locationCommentReplyOpen" data-location-id="' + escapeAttribute(locationId) + '" data-commentid="' + escapeAttribute(comment._idStr) + '">Reply</button>';
       if (comment.isMine || pageMeta.isAdmin) {
         html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/delete" method="post">';

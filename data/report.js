@@ -14,6 +14,25 @@ const normalizeString = (s) => {
   return s.trim();
 };
 
+/** Same rules as location `buildDateDisplay` / forum `buildForumDateDisplay` — for admin report list only. */
+const buildReportDateDisplay = (value) => {
+  let dateTimeISO = '';
+  let dateTimeLabel = '';
+  if (value instanceof Date) {
+    dateTimeISO = value.toISOString();
+    dateTimeLabel = value.toLocaleString();
+  } else if (value) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      dateTimeISO = parsed.toISOString();
+      dateTimeLabel = parsed.toLocaleString();
+    } else {
+      dateTimeLabel = String(value);
+    }
+  }
+  return { dateTimeISO, dateTimeLabel };
+};
+
 export const createForumPostReport = async (reporterUserId, postId, reason, description) => {
   const reporterIdStr = normalizeUserIdString(reporterUserId);
   await validateIdField(reporterIdStr);
@@ -21,11 +40,11 @@ export const createForumPostReport = async (reporterUserId, postId, reason, desc
 
   reason = normalizeString(reason);
   description = normalizeString(description);
-  if (!reason) throw new Error('Report reason is required');
+  if (!reason) throw new Error('Error: Select a reason,');
   if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
     throw new Error('Invalid report reason');
   }
-  if (reason === 'other' && !description) throw new Error('Description is required for "other"');
+  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
   if (description.length > 2000) throw new Error('Description too long');
 
   const forumCollection = await forum();
@@ -68,11 +87,11 @@ export const createForumCommentReport = async (reporterUserId, postId, commentId
 
   reason = normalizeString(reason);
   description = normalizeString(description);
-  if (!reason) throw new Error('Report reason is required');
+  if (!reason) throw new Error('Error: Select a reason,');
   if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
     throw new Error('Invalid report reason');
   }
-  if (reason === 'other' && !description) throw new Error('Description is required for "other"');
+  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
   if (description.length > 2000) throw new Error('Description too long');
 
   const forumCollection = await forum();
@@ -107,6 +126,9 @@ export const getWaitingReportsForAdmin = async () => {
   const rows = await reportCollection.find({ status: 'waiting' }).sort({ dateTimeCreated: -1 }).toArray();
   for (let i = 0; i < rows.length; i++) {
     rows[i]._idStr = rows[i]._id.toString();
+    const createdDisplay = buildReportDateDisplay(rows[i].dateTimeCreated);
+    rows[i].dateTimeLabel = createdDisplay.dateTimeLabel;
+    rows[i].dateTimeISO = createdDisplay.dateTimeISO;
     try {
       const u = await getUserById(rows[i].userId.toString());
       if (u && u.username) rows[i].username = u.username;

@@ -6,13 +6,15 @@ import { getUserById } from './user.js';
 const FORUM_CATEGORIES = ['all', 'tennis', 'basketball', 'handball', 'hiking'];
 
 const validateCategory = (cat) => {
-  if (typeof cat !== 'string' || !FORUM_CATEGORIES.includes(cat.trim())) throw new Error('Invalid forum category');
-  return cat.trim();
+  if (typeof cat !== 'string' || !String(cat).trim()) throw new Error('Error: Select a category,');
+  const t = cat.trim();
+  if (!FORUM_CATEGORIES.includes(t)) throw new Error('Invalid forum category');
+  return t;
 };
 
 const validateTitleAndBody = (title, body) => {
-  if (typeof title !== 'string' || !title.trim()) throw new Error('Title is required');
-  if (typeof body !== 'string' || !body.trim()) throw new Error('Post body is required');
+  if (typeof title !== 'string' || !title.trim()) throw new Error('Error: Enter a title,');
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Error: Enter a body,');
   if (title.trim().length > 200) throw new Error('Title is too long');
   if (body.trim().length > 10000) throw new Error('Post body is too long');
   return [title.trim(), body.trim()];
@@ -26,6 +28,24 @@ const normalizeUserIdString = (userId) => {
 const emptyIfMissing = (arr) => {
   if (!arr) return [];
   return arr;
+};
+
+const buildForumDateDisplay = (value) => {
+  let dateTimeISO = '';
+  let dateTimeLabel = '';
+  if (value instanceof Date) {
+    dateTimeISO = value.toISOString();
+    dateTimeLabel = value.toLocaleString();
+  } else if (value) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      dateTimeISO = parsed.toISOString();
+      dateTimeLabel = parsed.toLocaleString();
+    } else {
+      dateTimeLabel = String(value);
+    }
+  }
+  return { dateTimeISO, dateTimeLabel };
 };
 
 export const getPostById = async (id) => {
@@ -52,7 +72,12 @@ const getChildComments = async (processedCommentList, pId) => {
   return childCommentList;
 };
 const getCommentTree = async (processedCommentList, pId) => {
-  let commentTree = processedCommentList.filter((comment) => pId == null || comment["parentId"] == null ? comment["parentId"] == pId : comment["parentId"].toString() == pId.toString());
+  let commentTree = processedCommentList.filter((comment) => {
+    if (pId == null || comment["parentId"] == null) {
+      return comment["parentId"] == pId;
+    }
+    return comment["parentId"].toString() == pId.toString();
+  });
 
   for (let comment of commentTree) {
     comment["childrenCommentList"] = await getChildComments(processedCommentList, comment["_id"]);
@@ -145,14 +170,9 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
     let authorUsername = userMap[key];
     if (authorUsername === undefined || authorUsername === null) authorUsername = 'Unknown';
 
-    let dateTimeISO = '';
-    let dateTimeLabel = '';
-    if (p.dateTimeCreated instanceof Date) {
-      dateTimeISO = p.dateTimeCreated.toISOString();
-      dateTimeLabel = p.dateTimeCreated.toLocaleString();
-    } else {
-      dateTimeLabel = String(p.dateTimeCreated);
-    }
+    const postDates = buildForumDateDisplay(p.dateTimeCreated);
+    const dateTimeISO = postDates.dateTimeISO;
+    const dateTimeLabel = postDates.dateTimeLabel;
 
     const liked = emptyIfMissing(p.likedUserIdList);
     const disliked = emptyIfMissing(p.dislikedUserIdList);
@@ -173,13 +193,9 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
       const userOb = await getUserById(comment["userId"].toString());
       comment["isMine"] = comment["userId"].toString() === currentUserIdStr;
       comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
-      let commentDateTimeLabel = '';
-      if (comment.dateTimeCreated instanceof Date) {
-        commentDateTimeLabel = comment.dateTimeCreated.toLocaleString();
-      } else {
-        commentDateTimeLabel = String(comment.dateTimeCreated);
-      }
-      comment["dateTimeLabel"] = commentDateTimeLabel;
+      const commentDates = buildForumDateDisplay(comment.dateTimeCreated);
+      comment["dateTimeLabel"] = commentDates.dateTimeLabel;
+      comment["dateTimeISO"] = commentDates.dateTimeISO;
       const likedC = emptyIfMissing(comment["likedUserIdList"]);
       const dislikedC = emptyIfMissing(comment["dislikedUserIdList"]);
       comment["likeCount"] = likedC.length;
@@ -286,7 +302,7 @@ export const toggleDislikePost = async (postId, userId) => {
 };
 
 const validateCommentBody = (body) => {
-  if (typeof body !== 'string' || !body.trim()) throw new Error('Comment body is required');
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Error: Enter a comment,');
   if (body.trim().length > 5000) throw new Error('Comment is too long');
   return body.trim();
 };

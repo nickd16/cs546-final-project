@@ -662,6 +662,70 @@ export const deleteLocationCommentByUser = async (locationId, commentId, userId)
   return true;
 };
 
+export const toggleLikeLocationComment = async (locationId, commentId, userId) => {
+  locationId = await validateIdField(locationId);
+  commentId = await validateIdField(commentId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const c = findCommentInLocation(loc, commentId);
+  if (!c) throw new Error('Comment not found');
+
+  const uid = new ObjectId(userIdStr);
+  const commentOid = new ObjectId(commentId);
+  const liked = emptyIfMissing(c.likedUserIdList);
+  const inLiked = liked.some((id) => id.equals(uid));
+
+  if (inLiked) {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$pull: {'commentList.$[c].likedUserIdList': uid}},
+      {arrayFilters: [{'c._id': commentOid}]},
+    );
+  } else {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$addToSet: {'commentList.$[c].likedUserIdList': uid}, $pull: {'commentList.$[c].dislikedUserIdList': uid}},
+      {arrayFilters: [{'c._id': commentOid}]},
+    );
+  }
+  return true;
+};
+
+export const toggleDislikeLocationComment = async (locationId, commentId, userId) => {
+  locationId = await validateIdField(locationId);
+  commentId = await validateIdField(commentId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const c = findCommentInLocation(loc, commentId);
+  if (!c) throw new Error('Comment not found');
+
+  const uid = new ObjectId(userIdStr);
+  const commentOid = new ObjectId(commentId);
+  const disliked = emptyIfMissing(c.dislikedUserIdList);
+  const inDisliked = disliked.some((id) => id.equals(uid));
+
+  if (inDisliked) {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$pull: {'commentList.$[c].dislikedUserIdList': uid}},
+      {arrayFilters: [{'c._id': commentOid}]},
+    );
+  } else {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$addToSet: {'commentList.$[c].dislikedUserIdList': uid}, $pull: {'commentList.$[c].likedUserIdList': uid}},
+      {arrayFilters: [{'c._id': commentOid}]},
+    );
+  }
+  return true;
+};
+
 export const addLocationStatus = async (locationId, userId, body) => {
   locationId = await validateIdField(locationId);
   const userIdStr = normalizeUserIdString(userId);
