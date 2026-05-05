@@ -456,8 +456,8 @@
     html += '<section>';
     html += '<h4>Time Slots</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/timeslots/range" method="post">';
-    html += '<p><label for="slot-start">Start</label><br><input id="slot-start" type="datetime-local" name="startDateTime" step="1800" required></p>';
-    html += '<p><label for="slot-end">End</label><br><input id="slot-end" type="datetime-local" name="endDateTime" step="1800" required></p>';
+    html += '<p><label for="slot-start">Start</label><br><input id="slot-start" type="datetime-local" name="startDateTime" step="900" required></p>';
+    html += '<p><label for="slot-end">End</label><br><input id="slot-end" type="datetime-local" name="endDateTime" step="900" required></p>';
     html += '<p>Ranges snap to 15 minute blocks when saved.</p>';
     html += '<p><button type="submit">Create or join 15 minute range</button></p>';
     html += '</form>';
