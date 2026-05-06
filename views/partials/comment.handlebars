@@ -16,9 +16,14 @@
     <button type="button" class="forumCommentReportOpen" data-postid="{{_postIdStr}}" data-commentid="{{_idStr}}">Report</button>
     <button type="button" class="forumReplyOpen" data-postid="{{_postIdStr}}" data-commentid="{{_idStr}}">Reply</button>
     {{!-- Comment Layer Deeper --}}
-    <div class="commentTree"> 
-        {{#each childrenCommentList}}
-            {{> comment}}
-        {{/each}}
-    </div>
+    {{#if childrenCommentList.length}}
+    <details class="commentTreeToggle">
+        <summary>Replies ({{childrenCommentList.length}})</summary>
+        <div class="commentTree">
+            {{#each childrenCommentList}}
+                {{> comment}}
+            {{/each}}
+        </div>
+    </details>
+    {{/if}}
 </div>

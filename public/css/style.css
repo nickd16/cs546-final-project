@@ -250,6 +250,19 @@ main > * > section {
 .commentTree {
     position: relative !important;
     left: 2rem !important;
+    margin-top: 0.75rem;
+    padding-left: 1rem;
+    border-left: 2px solid rgba(0, 0, 0, 0.18);
+}
+
+.commentTreeToggle {
+    margin-top: 0.75rem;
+}
+
+.commentTreeToggle > summary {
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .error {

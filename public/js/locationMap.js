@@ -615,7 +615,7 @@
       }
       html += '</div>';
       if (comment.childrenCommentList && comment.childrenCommentList.length) {
-        html += '<div class="commentTree">' + buildCommentTreeHtml(locationId, comment.childrenCommentList) + '</div>';
+        html += '<details class="commentTreeToggle"><summary>Replies (' + escapeHtml(String(comment.childrenCommentList.length)) + ')</summary><div class="commentTree">' + buildCommentTreeHtml(locationId, comment.childrenCommentList) + '</div></details>';
       }
       html += '</div>';
     }
