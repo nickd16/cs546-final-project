@@ -151,7 +151,36 @@ export const deleteUserById = async (
   if (status.deletedCount != 1) {
     throw Error("user not found from id!");
   }
-  
-  // delete user1["hashedPassword"]; // If they need this they need to be verified! // User is deleted so what is the point of hiding the hash
   return user1;
+}
+
+export const privilegeUserById = async (
+  _id
+) => {
+  _id = await validateIdField(_id);
+
+  const userCollection = await user();
+
+  let user1 = await userCollection.findOne({_id: new ObjectId(_id)}); // Before privilege
+  if (user1 == null) {
+    throw Error("user not found from id!");
+  }
+  const status = await userCollection.updateOne({_id: new ObjectId(_id)}, {"$set": {isAdmin: true}});
+  user1 = await userCollection.findOne({_id: new ObjectId(_id)}); // After privilege
+  
+  delete user1["hashedPassword"];
+  return user1;
+}
+
+export const getAllUsers = async () => {
+  const userCollection = await user();
+  let users = await userCollection.find({}).sort({ dateTimeCreated: -1 }).toArray();
+
+
+  users = users.map((user) => {
+    delete user["hashedPassword"]; 
+    return user;
+  });
+  
+  return users;
 }

@@ -1,0 +1,25 @@
+<h1>Users</h1>
+{{#if users.length}}
+<ul>
+    {{#each users}}
+    <li>
+        <h2>Username: {{username}}</h2>
+        <h2>ID: {{_idStr}}</h2>
+        <p>Registered: {{dateTimeLabel}}</p>
+        {{#if isNotDeletable}}
+        <div>
+            <form action="/users/{{_idStr}}/delete" method="post">
+                <button type="submit">Delete</button>
+            </form>
+            <form action="/users/{{_idStr}}/privilege" method="post">
+                <button type="submit">Make Admin</button>
+            </form>
+        </div>
+        {{/if}}
+        <hr>
+    </li>
+    {{/each}}
+</ul>
+{{else}}
+<p>No users yet.</p>
+{{/if}}

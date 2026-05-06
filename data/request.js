@@ -13,7 +13,13 @@ const normalizeUserIdString = (userId) => {
 export const getWaitingRequestsForAdmin = async () => {
   const requestCollection = await locationRequest();
   return requestCollection.find({ status: 'waiting' }).map(async (reqEntry) => {
-    reqEntry["username"] = (await getUserById(reqEntry["userId"].toString()))["username"]; // Give the front end usernames to render
+    let usernameToRender = "";
+    try {
+        usernameToRender = (await getUserById(reqEntry["userId"].toString()))["username"]
+    } catch (e) {
+        usernameToRender = "Unknown";
+    }
+    reqEntry["username"] = usernameToRender; // Give the front end usernames to render
     return reqEntry;
   }).sort({ dateTimeCreated: -1 }).toArray();
 };

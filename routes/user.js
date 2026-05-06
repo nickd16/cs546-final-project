@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import { registerUser, getLoginToken, getUserById, addFavLocationToUserById, removeFavLocationToUserById } from '../data/user.js';
+import { registerUser, getLoginToken, getUserById, addFavLocationToUserById, removeFavLocationToUserById, getAllUsers, deleteUserById, privilegeUserById} from '../data/user.js';
 import {checkDupUsername, usernameExists, passwordMatchesHash, validateUsernameField, validatePasswordField, validateIdField} from '../helpers.js'
 import {user} from '../config/mongoCollections.js';
 import {ObjectId} from 'mongodb';
@@ -44,7 +44,7 @@ router
   ],
   async (req, res) => {
     const errors = validationResult(req); // This will check for the username and password validation errors
-    if (!errors.isEmpty()) return res.status(400).render('login', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Login', error: 'Error registering user: ' + errors.array()[0]['msg'] });
+    if (!errors.isEmpty()) return res.status(400).render('login', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Login', error: 'Error logging in user: ' + errors.array()[0]['msg'] });
 
     const { username, password } = req.body;
     
@@ -99,9 +99,7 @@ router
 
       req.session.token = token; // Using sessions
       return res.redirect('/?register=success');
-      // res.status(201).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', success: 'User registered successfully! Now go to login to login.'});
     } catch (err) {
-      // res.status(500).json({ message: 'Error registering user', error: err.message });
       res.status(500).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', error: 'Error registering user: ' + err.message});
     }
    });
@@ -122,14 +120,11 @@ router
     } catch (e) {
       return res.status(400).json({"error" : e});
     }
-    // Only publicly available infomation should be getable here unless we make a special self user route for getting private info
-    // delete user["hashedPassword"]; // If they need this they need to be verified!
+
     if (req.user.id != userId) { // Only give the users favLocationIds to the user who it belongs to for client side map rendering
       delete user["favLocationIds"];
     }
     return res.status(200).json(user);
-    
-    // res.sendFile(path.join(__dirname, '/views/index.html'));
    });
 
    router.route('/user/:userId/favLocations/').post([authMW, check('userId').notEmpty().custom(async value => {
@@ -191,7 +186,82 @@ router
     delete req.session.token;
     delete req.user;
     return res.render('logout', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Logout',});
+   });
+
+   const requireAdminPage = (req, res, next) => {
+    if (!req.user || !req.user.isAdmin) return res.status(403).render('error', { layout: 'main.handlebars', "loggedIn": req.user, title: 'Users', error_text: 'Admin access required' });
+    next();
+   };
+
+   router
+  .route('/users')
+  .get([authRedirectMW, requireAdminPage], async (req, res) => {
+    //code here for GET
+    let users = await getAllUsers();
+
+    users = users.map((user) => {
+      user["dateTimeLabel"] = user["dateTimeCreated"].toLocaleString();
+      user["_idStr"] = user["_id"].toString();
+      if (req.user["id"] != user["_id"].toString() && !user["isAdmin"]) {
+        user["isNotDeletable"] = true;
+      }
+      return user;
+    });
+
+    return res.render('users', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Users', "users": users});
    })
+  
+
+  router
+  .route('/users/:userId/delete')
+  .post([authRedirectMW, requireAdminPage, check('userId').notEmpty().custom(async value => {
+      value = await validateIdField(value);
+      await getUserById(value);
+      
+    })], async (req, res) => {
+    // code here for POST
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0]['msg'] });
+
+    const userToDelete = await getUserById(req.params.userId);
+    
+    if (userToDelete["isAdmin"]) {
+      return res.redirect("/users?error=cannotdeleteotheradmins");
+    }
+
+    if (req.user.id == req.params.userId) {
+      return res.redirect("/users?error=cannotdeleteself");
+    }
+
+    await deleteUserById(req.params.userId);
+    
+    return res.redirect("/users");
+  })
+
+  router
+  .route('/users/:userId/privilege')
+  .post([authRedirectMW, requireAdminPage, check('userId').notEmpty().custom(async value => {
+      value = await validateIdField(value);
+      await getUserById(value);
+    })], async (req, res) => {
+    // code here for POST
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0]['msg'] });
+
+    const userToPrivilege = await getUserById(req.params.userId);
+    
+    if (userToPrivilege["isAdmin"]) {
+      return res.redirect("/users?error=cannotprivilegeotheradmins");
+    }
+
+    if (req.user.id == req.params.userId) {
+      return res.redirect("/users?error=cannotprivilegeself");
+    }
+
+    await privilegeUserById(req.params.userId);
+    
+    return res.redirect("/users");
+  })
 
 
 export default router;

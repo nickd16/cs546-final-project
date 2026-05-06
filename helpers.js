@@ -67,7 +67,40 @@ export const validatePasswordField = async (password) => {
     if (trimmedPassword.length < 6) { // Less then 6 characters
         throw Error("Password is less then 6 characters!");
     }
-    return password;
+
+    let passwordLowerCaseCount = 0;
+    let passwordUpperCaseCount = 0;
+    let passwordDigitCount = 0;
+    let passwordSpecialCharCount = 0;
+
+    for (let characterIndex = 0; characterIndex < trimmedPassword.length; characterIndex++) {
+        const currCharC = trimmedPassword[characterIndex];
+        const currChar = trimmedPassword[characterIndex].charCodeAt(0);
+        if (('a'.charCodeAt(0) <= currChar && 'z'.charCodeAt(0) >= currChar)) { // Lowercase
+            passwordLowerCaseCount += 1;
+        } else if (('A'.charCodeAt(0) <= currChar && 'Z'.charCodeAt(0) >= currChar)) { // Uppercase
+            passwordUpperCaseCount += 1;
+        } else if (('0'.charCodeAt(0) <= currChar && '9'.charCodeAt(0) >= currChar)) { // Numbers
+            passwordDigitCount += 1;
+        } else { // Special Characters
+            passwordSpecialCharCount += 1;
+        }
+    }
+
+    if (!passwordLowerCaseCount >= 1) {
+        throw Error("Password has no lower case characters!");
+    }
+    if (!passwordUpperCaseCount >= 1) {
+        throw Error("Password has no upper case characters!");
+    }
+    if (!passwordDigitCount >= 1) {
+        throw Error("Password has no digits!");
+    }
+    if (!passwordSpecialCharCount >= 1) {
+        throw Error("Password has no special characters!");
+    }
+
+    return trimmedPassword;
 };
 
 export const validateHashedPasswordField = async (hashedPassword) => {
@@ -103,7 +136,7 @@ export const validateFavLocationIdsField = async (favLocationIds) => {
     return favLocationIds;
 };
 
-export const validateIdField = async (id) => { // We can keep these validaters up to date so across anywhere we used the field we will check
+export const validateIdField = async (id) => { // We can keep these validators up to date so across anywhere we used the field we will check
     if (typeof id == 'undefined') {
         throw Error("id is undefined!");
     }
