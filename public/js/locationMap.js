@@ -224,14 +224,6 @@
         renderMap(referencePoint, radiusMiles);
         renderNearbyList();
 
-        if (state.selectedLocationId) {
-          let foundSelected = false;
-          for (let i = 0; i < state.nearbyLocations.length; i++) {
-            if (state.nearbyLocations[i]._idStr === state.selectedLocationId) foundSelected = true;
-          }
-          if (!foundSelected) state.selectedLocationId = '';
-        }
-
         if (!state.selectedLocationId && state.nearbyLocations.length) state.selectedLocationId = state.nearbyLocations[0]._idStr;
         if (state.selectedLocationId) loadLocationDetails(state.selectedLocationId);
         else renderEmptyDetail();
