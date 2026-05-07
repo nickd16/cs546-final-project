@@ -253,16 +253,16 @@ main > * > section {
     margin-top: 0.75rem;
     padding-left: 1rem;
     border-left: 2px solid rgba(0, 0, 0, 0.18);
+    width: calc(100% - 2rem);
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
-.commentTreeToggle {
-    margin-top: 0.75rem;
-}
-
-.commentTreeToggle > summary {
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 600;
+.commentTree p,
+.commentTree button,
+.commentTree form,
+.commentTree div {
+    max-width: 100%;
 }
 
 .error {
