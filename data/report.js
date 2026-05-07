@@ -1,5 +1,6 @@
 import { report } from '../config/mongoCollections.js';
 import { forum } from '../config/mongoCollections.js';
+import { location } from '../config/mongoCollections.js';
 import { ObjectId } from 'mongodb';
 import { validateIdField } from '../helpers.js';
 import { getUserById } from './user.js';
@@ -84,6 +85,15 @@ const findCommentInPost = (post, commentIdStr) => {
   return null;
 };
 
+const findCommentInLocation = (loc, commentIdStr) => {
+  const list = loc.commentList || [];
+  const cid = new ObjectId(commentIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(cid)) return list[i];
+  }
+  return null;
+};
+
 export const createForumCommentReport = async (reporterUserId, postId, commentId, reason, description) => {
   const reporterIdStr = normalizeUserIdString(reporterUserId);
   await validateIdField(reporterIdStr);
@@ -125,10 +135,14 @@ export const createForumCommentReport = async (reporterUserId, postId, commentId
   return true;
 };
 
-export const getWaitingReportsForAdmin = async () => {
+export const getWaitingReportsForAdmin = async (adminUserId) => {
+  const adminIdStr = normalizeUserIdString(adminUserId);
+  await validateIdField(adminIdStr);
   const reportCollection = await report();
   const forumCollection = await forum();
+  const locationCollection = await location();
   const rows = await reportCollection.find({ status: 'waiting' }).sort({ dateTimeCreated: -1 }).toArray();
+  let finalRows = [];
   for (let i = 0; i < rows.length; i++) {
     rows[i]._idStr = rows[i]._id.toString();
     const createdDisplay = buildReportDateDisplay(rows[i].dateTimeCreated);
@@ -154,19 +168,44 @@ export const getWaitingReportsForAdmin = async () => {
           else if (bodyText) rows[i].reportedContentText = bodyText;
         }
       } else if (rows[i].typeOfContent === 'comment' && rows[i].locationOrForumId && rows[i].contentId) {
-        const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
-        if (post) {
-          const comment = findCommentInPost(post, rows[i].contentId.toString());
-          if (comment && typeof comment.body === 'string' && comment.body.trim()) {
-            rows[i].reportedContentText = comment.body.trim();
+        if (rows[i].forumOrLocation === 'forum') {
+          const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
+          if (post) {
+            const comment = findCommentInPost(post, rows[i].contentId.toString());
+            if (comment) {
+              if (typeof comment.body === 'string' && comment.body.trim()) {
+                rows[i].reportedContentText = comment.body.trim();
+              }
+            }
           }
+          else {
+            // does not exist, reject the report automatically
+            await rejectReport(rows[i]._idStr, adminIdStr);
+            continue;
+          }
+        } else if (rows[i].forumOrLocation === 'location') {
+          const loc = await locationCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
+          if (loc) {
+            const comment = findCommentInLocation(loc, rows[i].contentId.toString());
+            if (comment) {
+               if (typeof comment.body === 'string' && comment.body.trim()) {
+                rows[i].reportedContentText = comment.body.trim();
+              }
+            }
+          }
+          else {
+            // does not exist, reject the report 
+            await rejectReport(rows[i]._idStr, adminIdStr);
+            continue;
+          }   
         }
       }
+      finalRows.push(rows[i]);
     } catch (err) {
       rows[i].reportedContentText = 'Reported content no longer available';
     }
   }
-  return rows;
+  return finalRows;
 };
 
 export const acceptReport = async (reportId, adminUserId) => {
