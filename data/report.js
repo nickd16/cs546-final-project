@@ -14,6 +14,11 @@ const normalizeString = (s) => {
   return s.trim();
 };
 
+const isMissingTargetError = (err) => {
+  const message = err && err.message ? String(err.message) : String(err || '');
+  return message === 'Post not found' || message === 'Comment not found' || message === 'Location not found';
+};
+
 /** Same rules as location `buildDateDisplay` / forum `buildForumDateDisplay` — for admin report list only. */
 const buildReportDateDisplay = (value) => {
   let dateTimeISO = '';
@@ -173,20 +178,52 @@ export const acceptReport = async (reportId, adminUserId) => {
   const r = await reportCollection.findOne({ _id: new ObjectId(reportId) });
   if (!r) throw new Error('Report not found');
   if (r.status !== 'waiting') throw new Error('Report already reviewed');
-  if (r.forumOrLocation !== 'forum') throw new Error('Unsupported report type');
+  if (r.forumOrLocation !== 'forum' && r.forumOrLocation !== 'location') throw new Error('Unsupported report type');
 
-  if (r.typeOfContent === 'post') {
-    const postId = r.contentId.toString();
-    const forumCollection = await forum();
-    const del = await forumCollection.deleteOne({ _id: new ObjectId(postId) });
-    if (del.deletedCount === 0) throw new Error('Post not found');
-  } else if (r.typeOfContent === 'comment') {
-    if (!r.locationOrForumId) throw new Error('Report missing post id');
-    if (!r.contentId) throw new Error('Report missing comment id');
-    const postId = r.locationOrForumId.toString();
-    const commentId = r.contentId.toString();
-    const { removeCommentSubtreeFromPost } = await import('./forum.js');
-    await removeCommentSubtreeFromPost(postId, commentId);
+  if (r.forumOrLocation === 'forum') {
+    if (r.typeOfContent === 'post') {
+      const postId = r.contentId.toString();
+      const forumCollection = await forum();
+      try {
+        const del = await forumCollection.deleteOne({ _id: new ObjectId(postId) });
+        if (del.deletedCount === 0) throw new Error('Post not found');
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else if (r.typeOfContent === 'comment') {
+      if (!r.locationOrForumId) throw new Error('Report missing post id');
+      if (!r.contentId) throw new Error('Report missing comment id');
+      const postId = r.locationOrForumId.toString();
+      const commentId = r.contentId.toString();
+      const { removeCommentSubtreeFromPost } = await import('./forum.js');
+      try {
+        await removeCommentSubtreeFromPost(postId, commentId);
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else {
+      throw new Error('Unsupported report type');
+    }
+  } else if (r.forumOrLocation === 'location') {
+    if (r.typeOfContent === 'post') {
+      const { deleteLocationById } = await import('./location.js');
+      try {
+        await deleteLocationById(r.contentId.toString());
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else if (r.typeOfContent === 'comment') {
+      if (!r.locationOrForumId) throw new Error('Report missing location id');
+      if (!r.contentId) throw new Error('Report missing comment id');
+      const { deleteLocationCommentByUser } = await import('./location.js');
+      try {
+        await deleteLocationCommentByUser(r.locationOrForumId.toString(), r.contentId.toString(), adminIdStr);
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else {
+      throw new Error('Unsupported report type');
+    }
   } else {
     throw new Error('Unsupported report type');
   }
