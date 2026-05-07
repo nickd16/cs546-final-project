@@ -3,6 +3,9 @@
   if (!mapElement || typeof L === 'undefined') return;
 
   const pageMeta = window.locationPageMeta || {};
+  function canShowDeleteForOwnerContent(isMineFlag) {
+    return isMineFlag === true || pageMeta.isAdmin === true;
+  }
   const nearbyListElement = document.getElementById('location-nearby-list');
   const nearbySummaryElement = document.getElementById('location-nearby-summary');
   const favoriteListElement = document.getElementById('location-favorites-list');
@@ -450,7 +453,7 @@
     html += '<textarea id="rating-review" name="review" rows="3" required></textarea></p>';
     html += '<p><button type="submit">Save rating</button></p>';
     html += '</form>';
-    html += buildRatingsHtml(location.ratings);
+    html += buildRatingsHtml(location.ratings, location._idStr);
     html += '</section>';
 
     html += '<section>';
@@ -470,7 +473,7 @@
     html += '<p><label for="status-body">Status update</label><br><textarea id="status-body" name="body" rows="3" required></textarea></p>';
     html += '<p><button type="submit">Post status update</button></p>';
     html += '</form>';
-    if (pageMeta.isAdmin) {
+    if (pageMeta.isAdmin === true) {
       html += '<form action="/location/' + escapeAttribute(location._idStr) + '/status/clear" method="post">';
       html += '<button type="submit">Clear all statuses</button>';
       html += '</form>';
@@ -532,7 +535,7 @@
     applyPendingUiRestore();
   }
 
-  function buildRatingsHtml(ratings) {
+  function buildRatingsHtml(ratings, locationIdStr) {
     if (!ratings || !ratings.length) return '<p>No ratings yet.</p>';
     let html = '<ul>';
     for (let i = 0; i < ratings.length; i++) {
@@ -541,6 +544,21 @@
       html += '<p><strong>' + escapeHtml(rating.authorUsername || 'Unknown') + '</strong> rated ' + escapeHtml(String(rating.score || '')) + '/5</p>';
       html += '<p>' + escapeHtml(rating.review || '') + '</p>';
       html += '<p>' + escapeHtml(rating.dateTimeLabel || '') + '</p>';
+      if (locationIdStr && rating._idStr) {
+        html += '<div class="location-rating-actions">';
+        html += '<form action="/location/' + escapeAttribute(locationIdStr) + '/rating/' + escapeAttribute(rating._idStr) + '/like" method="post">';
+        html += '<button type="submit">Like (' + escapeHtml(String(rating.likeCount || 0)) + ')</button>';
+        html += '</form>';
+        html += '<form action="/location/' + escapeAttribute(locationIdStr) + '/rating/' + escapeAttribute(rating._idStr) + '/dislike" method="post">';
+        html += '<button type="submit">Dislike (' + escapeHtml(String(rating.dislikeCount || 0)) + ')</button>';
+        html += '</form>';
+        if (canShowDeleteForOwnerContent(rating.isMine)) {
+          html += '<form action="/location/' + escapeAttribute(locationIdStr) + '/rating/' + escapeAttribute(rating._idStr) + '/delete" method="post">';
+          html += '<button type="submit">Delete rating</button>';
+          html += '</form>';
+        }
+        html += '</div>';
+      }
       html += '</li>';
     }
     html += '</ul>';
@@ -581,6 +599,11 @@
       html += '<input type="hidden" name="voteType" value="disagree">';
       html += '<button type="submit">Disagree (' + escapeHtml(String(status.disagreeCount || 0)) + ')</button>';
       html += '</form>';
+      if (canShowDeleteForOwnerContent(status.isMine)) {
+        html += '<form action="/location/' + escapeAttribute(location._idStr) + '/status/' + escapeAttribute(status._idStr) + '/delete" method="post">';
+        html += '<button type="submit">Delete status</button>';
+        html += '</form>';
+      }
       html += '</li>';
     }
     html += '</ul>';
@@ -608,7 +631,7 @@
       html += '<button type="submit">Dislike (' + escapeHtml(String(comment.dislikeCount || 0)) + ')</button>';
       html += '</form>';
       html += '<button type="button" class="locationCommentReplyOpen" data-location-id="' + escapeAttribute(locationId) + '" data-commentid="' + escapeAttribute(comment._idStr) + '">Reply</button>';
-      if (comment.isMine || pageMeta.isAdmin) {
+      if (canShowDeleteForOwnerContent(comment.isMine)) {
         html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/delete" method="post">';
         html += '<button type="submit">Delete</button>';
         html += '</form>';

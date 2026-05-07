@@ -119,6 +119,15 @@ const findCommentInLocation = (loc, commentIdStr) => {
   return null;
 };
 
+const findRatingInLocation = (loc, ratingIdStr) => {
+  const list = emptyIfMissing(loc.ratingList);
+  const rid = new ObjectId(ratingIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(rid)) return list[i];
+  }
+  return null;
+};
+
 const getChildComments = async (processedCommentList, pId) => {
   const childCommentList = [];
   for (let i = 0; i < processedCommentList.length; i++) {
@@ -445,16 +454,23 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
   const commentList = emptyIfMissing(loc.commentList);
 
   const idStrings = [];
-  for (let i = 0; i < ratingList.length; i++) idStrings.push(String(ratingList[i].userId || ''));
-  for (let i = 0; i < statusUpdateList.length; i++) idStrings.push(String(statusUpdateList[i].userId || ''));
-  for (let i = 0; i < commentList.length; i++) idStrings.push(String(commentList[i].userId || ''));
+  for (let i = 0; i < ratingList.length; i++) idStrings.push(normalizeUserIdString(ratingList[i].userId));
+  for (let i = 0; i < statusUpdateList.length; i++) idStrings.push(normalizeUserIdString(statusUpdateList[i].userId));
+  for (let i = 0; i < commentList.length; i++) idStrings.push(normalizeUserIdString(commentList[i].userId));
   const userMap = await getUsernamesByIds(idStrings);
 
   const ratings = [];
   for (let i = 0; i < ratingList.length; i++) {
     const rating = ratingList[i];
     const dateData = buildDateDisplay(rating.dateTimeCreated);
-    const uid = String(rating.userId || '');
+    const uid = normalizeUserIdString(rating.userId);
+    const likedUserIdList = emptyIfMissing(rating.likedUserIdList).map((id) => id.toString());
+    const dislikedUserIdList = emptyIfMissing(rating.dislikedUserIdList).map((id) => id.toString());
+    let myVote = '';
+    if (currentUserIdStr) {
+      if (likedUserIdList.indexOf(currentUserIdStr) !== -1) myVote = 'like';
+      if (dislikedUserIdList.indexOf(currentUserIdStr) !== -1) myVote = 'dislike';
+    }
     ratings.push({
       _idStr: rating._id ? rating._id.toString() : '',
       userId: uid,
@@ -463,7 +479,10 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
       review: rating.review || '',
       dateTimeISO: dateData.dateTimeISO,
       dateTimeLabel: dateData.dateTimeLabel,
-      isMine: currentUserIdStr && uid === currentUserIdStr
+      isMine: Boolean(currentUserIdStr && uid && uid === currentUserIdStr),
+      likeCount: likedUserIdList.length,
+      dislikeCount: dislikedUserIdList.length,
+      myVote
     });
   }
   ratings.sort((a, b) => String(b.dateTimeISO).localeCompare(String(a.dateTimeISO)));
@@ -472,7 +491,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
   for (let i = 0; i < statusUpdateList.length; i++) {
     const status = statusUpdateList[i];
     const dateData = buildDateDisplay(status.dateTimeCreated);
-    const uid = String(status.userId || '');
+    const uid = normalizeUserIdString(status.userId);
     const agreedUserIdList = emptyIfMissing(status.agreedUserIdList).map((id) => id.toString());
     const disagreedUserIdList = emptyIfMissing(status.disagreedUserIdList).map((id) => id.toString());
     let myVote = '';
@@ -490,7 +509,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
       agreeCount: agreedUserIdList.length,
       disagreeCount: disagreedUserIdList.length,
       myVote,
-      isMine: currentUserIdStr && uid === currentUserIdStr
+      isMine: Boolean(currentUserIdStr && uid && uid === currentUserIdStr)
     });
   }
   statuses.sort((a, b) => String(b.dateTimeISO).localeCompare(String(a.dateTimeISO)));
@@ -517,7 +536,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
   for (let i = 0; i < commentList.length; i++) {
     const comment = commentList[i];
     const dateData = buildDateDisplay(comment.dateTimeCreated);
-    const uid = String(comment.userId || '');
+    const uid = normalizeUserIdString(comment.userId);
     const likedUserIdList = emptyIfMissing(comment.likedUserIdList).map((id) => id.toString());
     const dislikedUserIdList = emptyIfMissing(comment.dislikedUserIdList).map((id) => id.toString());
     let myVote = '';
@@ -534,7 +553,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
       body: comment.body || '',
       dateTimeISO: dateData.dateTimeISO,
       dateTimeLabel: dateData.dateTimeLabel,
-      isMine: currentUserIdStr && uid === currentUserIdStr,
+      isMine: Boolean(currentUserIdStr && uid && uid === currentUserIdStr),
       likeCount: likedUserIdList.length,
       dislikeCount: dislikedUserIdList.length,
       myVote
@@ -593,6 +612,8 @@ export const addLocationRating = async (locationId, userId, score, review) => {
       ratingList[i].score = cleanScore;
       ratingList[i].review = cleanReview;
       ratingList[i].dateTimeCreated = new Date();
+      if (!ratingList[i].likedUserIdList) ratingList[i].likedUserIdList = [];
+      if (!ratingList[i].dislikedUserIdList) ratingList[i].dislikedUserIdList = [];
       updated = true;
     }
   }
@@ -603,11 +624,130 @@ export const addLocationRating = async (locationId, userId, score, review) => {
       dateTimeCreated: new Date(),
       userId: new ObjectId(userIdStr),
       score: cleanScore,
-      review: cleanReview
+      review: cleanReview,
+      likedUserIdList: [],
+      dislikedUserIdList: []
     });
   }
 
   await locationCollection.updateOne({_id: new ObjectId(locationId)}, {$set: {ratingList}});
+  return true;
+};
+
+export const toggleLikeLocationRating = async (locationId, ratingId, userId) => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const r = findRatingInLocation(loc, ratingId);
+  if (!r) throw new Error('Rating not found');
+
+  const uid = new ObjectId(userIdStr);
+  const ratingOid = new ObjectId(ratingId);
+  const liked = emptyIfMissing(r.likedUserIdList);
+  const inLiked = liked.some((id) => id.equals(uid));
+
+  if (inLiked) {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$pull: {'ratingList.$[rt].likedUserIdList': uid}},
+      {arrayFilters: [{'rt._id': ratingOid}]},
+    );
+  } else {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$addToSet: {'ratingList.$[rt].likedUserIdList': uid}, $pull: {'ratingList.$[rt].dislikedUserIdList': uid}},
+      {arrayFilters: [{'rt._id': ratingOid}]},
+    );
+  }
+  return true;
+};
+
+export const toggleDislikeLocationRating = async (locationId, ratingId, userId) => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const r = findRatingInLocation(loc, ratingId);
+  if (!r) throw new Error('Rating not found');
+
+  const uid = new ObjectId(userIdStr);
+  const ratingOid = new ObjectId(ratingId);
+  const disliked = emptyIfMissing(r.dislikedUserIdList);
+  const inDisliked = disliked.some((id) => id.equals(uid));
+
+  if (inDisliked) {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$pull: {'ratingList.$[rt].dislikedUserIdList': uid}},
+      {arrayFilters: [{'rt._id': ratingOid}]},
+    );
+  } else {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$addToSet: {'ratingList.$[rt].dislikedUserIdList': uid}, $pull: {'ratingList.$[rt].likedUserIdList': uid}},
+      {arrayFilters: [{'rt._id': ratingOid}]},
+    );
+  }
+  return true;
+};
+
+export const deleteLocationRatingByUser = async (locationId, ratingId, userId) => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const r = findRatingInLocation(loc, ratingId);
+  if (!r) throw new Error('Rating not found');
+
+  let canDelete = false;
+  if (r.userId && r.userId.toString() === userIdStr) canDelete = true;
+  const userCollection = await userCollectionFn();
+  const userDoc = await userCollection.findOne({_id: new ObjectId(userIdStr)});
+  if (userDoc && userDoc.isAdmin) canDelete = true;
+  if (!canDelete) throw new Error('You can only delete your own rating');
+
+  const ratingOid = new ObjectId(ratingId);
+  await locationCollection.updateOne({_id: new ObjectId(locationId)}, {$pull: {ratingList: {_id: ratingOid}}});
+  return true;
+};
+
+export const deleteLocationStatusByUser = async (locationId, statusId, userId) => {
+  locationId = await validateIdField(locationId);
+  statusId = await validateIdField(statusId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const list = emptyIfMissing(loc.statusUpdateList);
+  const statusOid = new ObjectId(statusId);
+  let target = null;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(statusOid)) {
+      target = list[i];
+      break;
+    }
+  }
+  if (!target) throw new Error('Status update not found');
+
+  let canDelete = false;
+  if (target.userId && target.userId.toString() === userIdStr) canDelete = true;
+  const userCollection = await userCollectionFn();
+  const userDoc = await userCollection.findOne({_id: new ObjectId(userIdStr)});
+  if (userDoc && userDoc.isAdmin) canDelete = true;
+  if (!canDelete) throw new Error('You can only delete your own status update');
+
+  await locationCollection.updateOne({_id: new ObjectId(locationId)}, {$pull: {statusUpdateList: {_id: statusOid}}});
   return true;
 };
 

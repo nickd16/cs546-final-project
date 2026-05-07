@@ -10,6 +10,10 @@ import {
   deleteLocationCommentByUser,
   toggleLikeLocationComment,
   toggleDislikeLocationComment,
+  toggleLikeLocationRating,
+  toggleDislikeLocationRating,
+  deleteLocationRatingByUser,
+  deleteLocationStatusByUser,
   getFavoriteLocations,
   getLocationDetailsForDisplay,
   getNearbyLocationsForMap,
@@ -268,6 +272,60 @@ router.post('/:locationId/favorite', [authRedirectMW, check('locationId').notEmp
   }
 });
 
+router.post('/:locationId/rating/:ratingId/like', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await toggleLikeLocationRating(req.params.locationId, req.params.ratingId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', '');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update like'), '');
+  }
+});
+
+router.post('/:locationId/rating/:ratingId/dislike', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await toggleDislikeLocationRating(req.params.locationId, req.params.ratingId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', '');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update dislike'), '');
+  }
+});
+
+router.post('/:locationId/rating/:ratingId/delete', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await deleteLocationRatingByUser(req.params.locationId, req.params.ratingId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', 'Rating removed');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not remove rating'), '');
+  }
+});
+
 router.post('/:locationId/rating', [authRedirectMW,
   check('locationId').notEmpty().custom(async value => {
     value = await validateIdField(value);
@@ -378,6 +436,24 @@ router.post('/:locationId/status', [authRedirectMW,
     return locationPageRedirect(res, req.params.locationId, '', 'Status update posted');
   } catch (e) {
     return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not post status update'), '');
+  }
+});
+
+router.post('/:locationId/status/:statusId/delete', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('statusId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await deleteLocationStatusByUser(req.params.locationId, req.params.statusId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', 'Status update removed');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not remove status update'), '');
   }
 });
 
