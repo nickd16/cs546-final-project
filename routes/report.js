@@ -20,7 +20,7 @@ router.get('/', authRedirectMW, requireAdminPage, async (req, res) => {
   try {
     let pageError = null;
     if (req.query.error) pageError = String(req.query.error);
-    const reports = await getWaitingReportsForAdmin();
+    const reports = await getWaitingReportsForAdmin(userIdFromSession(req));
     const postReports = [];
     const commentReports = [];
     for (let i = 0; i < reports.length; i++) {
