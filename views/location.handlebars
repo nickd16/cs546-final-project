@@ -76,7 +76,8 @@
     {{#if isAdmin}}
     <section class="locations-admin-section">
         <h2>Create Location</h2>
-        <form action="/location/create" method="post">
+        <form id="locationCreateForm" action="/location/create" method="post">
+            <p id="locationCreateFormError" class="error" role="alert"></p>
             <p>
                 <label for="create-location-type">Location type</label><br>
                 <select id="create-location-type" name="locationType" required>

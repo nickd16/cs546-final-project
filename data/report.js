@@ -1,6 +1,5 @@
 import { report } from '../config/mongoCollections.js';
 import { forum } from '../config/mongoCollections.js';
-import { location } from '../config/mongoCollections.js';
 import { ObjectId } from 'mongodb';
 import { validateIdField } from '../helpers.js';
 import { getUserById } from './user.js';
@@ -17,10 +16,9 @@ const normalizeString = (s) => {
 
 const isMissingTargetError = (err) => {
   const message = err && err.message ? String(err.message) : String(err || '');
-  return message === 'Post not found' || message === 'Comment not found' || message === 'Location not found';
+  return message === 'Post not found' || message === 'Comment not found' || message === 'Location not found' || message === 'Rating not found' || message === 'Status update not found';
 };
 
-/** Same rules as location `buildDateDisplay` / forum `buildForumDateDisplay` — for admin report list only. */
 const buildReportDateDisplay = (value) => {
   let dateTimeISO = '';
   let dateTimeLabel = '';
@@ -39,45 +37,20 @@ const buildReportDateDisplay = (value) => {
   return { dateTimeISO, dateTimeLabel };
 };
 
-export const createForumPostReport = async (reporterUserId, postId, reason, description) => {
-  const reporterIdStr = normalizeUserIdString(reporterUserId);
-  await validateIdField(reporterIdStr);
-  postId = await validateIdField(postId);
-
-  reason = normalizeString(reason);
-  description = normalizeString(description);
-  if (!reason) throw new Error('Error: Select a reason,');
-  if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
+const validateReportReasonAndDescription = (reason, description) => {
+  const cleanReason = normalizeString(reason);
+  const cleanDescription = normalizeString(description);
+  if (!cleanReason) throw new Error('Error: Select a reason,');
+  if (cleanReason !== 'spam' && cleanReason !== 'harassment' && cleanReason !== 'hate' && cleanReason !== 'violence' && cleanReason !== 'other') {
     throw new Error('Invalid report reason');
   }
-  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
-  if (description.length > 2000) throw new Error('Description too long');
-
-  const forumCollection = await forum();
-  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
-  if (!post) throw new Error('Post not found');
-
-  const reportCollection = await report();
-
-  const doc = {
-    dateTimeCreated: new Date(),
-    status: 'waiting',
-    dateReviewedAt: null,
-    forumOrLocation: 'forum',
-    typeOfContent: 'post',
-    userId: new ObjectId(reporterIdStr),
-    contentId: new ObjectId(postId),
-    locationOrForumId: new ObjectId(postId),
-    reportReason: reason,
-    body: description,
-  };
-
-  await reportCollection.insertOne(doc);
-  return true;
+  if (cleanReason === 'other' && !cleanDescription) throw new Error('Error: Enter a description,');
+  if (cleanDescription.length > 2000) throw new Error('Description too long');
+  return { cleanReason, cleanDescription };
 };
 
 const findCommentInPost = (post, commentIdStr) => {
-  const list = post.commentList || [];
+  const list = Array.isArray(post.commentList) ? post.commentList : [];
   const cid = new ObjectId(commentIdStr);
   for (let i = 0; i < list.length; i++) {
     if (list[i]._id && list[i]._id.equals(cid)) return list[i];
@@ -86,7 +59,7 @@ const findCommentInPost = (post, commentIdStr) => {
 };
 
 const findCommentInLocation = (loc, commentIdStr) => {
-  const list = loc.commentList || [];
+  const list = Array.isArray(loc.commentList) ? loc.commentList : [];
   const cid = new ObjectId(commentIdStr);
   for (let i = 0; i < list.length; i++) {
     if (list[i]._id && list[i]._id.equals(cid)) return list[i];
@@ -94,31 +67,68 @@ const findCommentInLocation = (loc, commentIdStr) => {
   return null;
 };
 
-export const createForumCommentReport = async (reporterUserId, postId, commentId, reason, description) => {
+const findRatingInLocation = (loc, ratingIdStr) => {
+  const list = Array.isArray(loc.ratingList) ? loc.ratingList : [];
+  const rid = new ObjectId(ratingIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(rid)) return list[i];
+  }
+  return null;
+};
+
+const findStatusInLocation = (loc, statusIdStr) => {
+  const list = Array.isArray(loc.statusUpdateList) ? loc.statusUpdateList : [];
+  const sid = new ObjectId(statusIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(sid)) return list[i];
+  }
+  return null;
+};
+
+const createReportDoc = async (doc) => {
+  const reportCollection = await report();
+  await reportCollection.insertOne(doc);
+  return true;
+};
+
+export const createForumPostReport = async (reporterUserId, postId, reason, description) => {
   const reporterIdStr = normalizeUserIdString(reporterUserId);
   await validateIdField(reporterIdStr);
   postId = await validateIdField(postId);
-  commentId = await validateIdField(commentId);
-
-  reason = normalizeString(reason);
-  description = normalizeString(description);
-  if (!reason) throw new Error('Error: Select a reason,');
-  if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
-    throw new Error('Invalid report reason');
-  }
-  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
-  if (description.length > 2000) throw new Error('Description too long');
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
 
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
   if (!post) throw new Error('Post not found');
 
+  return createReportDoc({
+    dateTimeCreated: new Date(),
+    status: 'waiting',
+    dateReviewedAt: null,
+    forumOrLocation: 'forum',
+    typeOfContent: 'post',
+    userId: new ObjectId(reporterIdStr),
+    contentId: new ObjectId(postId),
+    locationOrForumId: new ObjectId(postId),
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
+};
+
+export const createForumCommentReport = async (reporterUserId, postId, commentId, reason, description) => {
+  const reporterIdStr = normalizeUserIdString(reporterUserId);
+  await validateIdField(reporterIdStr);
+  postId = await validateIdField(postId);
+  commentId = await validateIdField(commentId);
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
+
+  const forumCollection = await forum();
+  const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
+  if (!post) throw new Error('Post not found');
   const comment = findCommentInPost(post, commentId);
   if (!comment) throw new Error('Comment not found');
 
-  const reportCollection = await report();
-
-  const doc = {
+  return createReportDoc({
     dateTimeCreated: new Date(),
     status: 'waiting',
     dateReviewedAt: null,
@@ -127,42 +137,21 @@ export const createForumCommentReport = async (reporterUserId, postId, commentId
     userId: new ObjectId(reporterIdStr),
     contentId: new ObjectId(commentId),
     locationOrForumId: new ObjectId(postId),
-    reportReason: reason,
-    body: description,
-  };
-
-  await reportCollection.insertOne(doc);
-  return true;
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
 };
 
-<<<<<<< HEAD
-export const getWaitingReportsForAdmin = async (adminUserId) => {
-  const adminIdStr = normalizeUserIdString(adminUserId);
-  await validateIdField(adminIdStr);
-  const reportCollection = await report();
-  const forumCollection = await forum();
-  const locationCollection = await location();
-=======
 export const createLocationPostReport = async (reporterUserId, locationId, reason, description) => {
   const reporterIdStr = normalizeUserIdString(reporterUserId);
   await validateIdField(reporterIdStr);
   locationId = await validateIdField(locationId);
-
-  reason = normalizeString(reason);
-  description = normalizeString(description);
-  if (!reason) throw new Error('Error: Select a reason,');
-  if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
-    throw new Error('Invalid report reason');
-  }
-  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
-  if (description.length > 2000) throw new Error('Description too long');
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
 
   const { getLocationById } = await import('./location.js');
   await getLocationById(locationId);
 
-  const reportCollection = await report();
-
-  const doc = {
+  return createReportDoc({
     dateTimeCreated: new Date(),
     status: 'waiting',
     dateReviewedAt: null,
@@ -171,12 +160,9 @@ export const createLocationPostReport = async (reporterUserId, locationId, reaso
     userId: new ObjectId(reporterIdStr),
     contentId: new ObjectId(locationId),
     locationOrForumId: new ObjectId(locationId),
-    reportReason: reason,
-    body: description,
-  };
-
-  await reportCollection.insertOne(doc);
-  return true;
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
 };
 
 export const createLocationCommentReport = async (reporterUserId, locationId, commentId, reason, description) => {
@@ -184,25 +170,14 @@ export const createLocationCommentReport = async (reporterUserId, locationId, co
   await validateIdField(reporterIdStr);
   locationId = await validateIdField(locationId);
   commentId = await validateIdField(commentId);
-
-  reason = normalizeString(reason);
-  description = normalizeString(description);
-  if (!reason) throw new Error('Error: Select a reason,');
-  if (reason !== 'spam' && reason !== 'harassment' && reason !== 'hate' && reason !== 'violence' && reason !== 'other') {
-    throw new Error('Invalid report reason');
-  }
-  if (reason === 'other' && !description) throw new Error('Error: Enter a description,');
-  if (description.length > 2000) throw new Error('Description too long');
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
 
   const { getLocationById } = await import('./location.js');
   const loc = await getLocationById(locationId);
-  const commentList = Array.isArray(loc.commentList) ? loc.commentList : [];
-  const comment = commentList.find((entry) => entry && entry._id && entry._id.toString() === commentId);
+  const comment = findCommentInLocation(loc, commentId);
   if (!comment) throw new Error('Comment not found');
 
-  const reportCollection = await report();
-
-  const doc = {
+  return createReportDoc({
     dateTimeCreated: new Date(),
     status: 'waiting',
     dateReviewedAt: null,
@@ -211,21 +186,69 @@ export const createLocationCommentReport = async (reporterUserId, locationId, co
     userId: new ObjectId(reporterIdStr),
     contentId: new ObjectId(commentId),
     locationOrForumId: new ObjectId(locationId),
-    reportReason: reason,
-    body: description,
-  };
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
+};
 
-  await reportCollection.insertOne(doc);
-  return true;
+export const createLocationRatingReport = async (reporterUserId, locationId, ratingId, reason, description) => {
+  const reporterIdStr = normalizeUserIdString(reporterUserId);
+  await validateIdField(reporterIdStr);
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
+
+  const { getLocationById } = await import('./location.js');
+  const loc = await getLocationById(locationId);
+  const rating = findRatingInLocation(loc, ratingId);
+  if (!rating) throw new Error('Rating not found');
+
+  return createReportDoc({
+    dateTimeCreated: new Date(),
+    status: 'waiting',
+    dateReviewedAt: null,
+    forumOrLocation: 'location',
+    typeOfContent: 'rating',
+    userId: new ObjectId(reporterIdStr),
+    contentId: new ObjectId(ratingId),
+    locationOrForumId: new ObjectId(locationId),
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
+};
+
+export const createLocationStatusReport = async (reporterUserId, locationId, statusId, reason, description) => {
+  const reporterIdStr = normalizeUserIdString(reporterUserId);
+  await validateIdField(reporterIdStr);
+  locationId = await validateIdField(locationId);
+  statusId = await validateIdField(statusId);
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
+
+  const { getLocationById } = await import('./location.js');
+  const loc = await getLocationById(locationId);
+  const status = findStatusInLocation(loc, statusId);
+  if (!status) throw new Error('Status update not found');
+
+  return createReportDoc({
+    dateTimeCreated: new Date(),
+    status: 'waiting',
+    dateReviewedAt: null,
+    forumOrLocation: 'location',
+    typeOfContent: 'status',
+    userId: new ObjectId(reporterIdStr),
+    contentId: new ObjectId(statusId),
+    locationOrForumId: new ObjectId(locationId),
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
 };
 
 export const getWaitingReportsForAdmin = async () => {
   const reportCollection = await report();
   const forumCollection = await forum();
   const { getLocationById } = await import('./location.js');
->>>>>>> 25d9fca (feat: added reports to location page)
   const rows = await reportCollection.find({ status: 'waiting' }).sort({ dateTimeCreated: -1 }).toArray();
-  let finalRows = [];
+
   for (let i = 0; i < rows.length; i++) {
     rows[i]._idStr = rows[i]._id.toString();
     const createdDisplay = buildReportDateDisplay(rows[i].dateTimeCreated);
@@ -233,18 +256,28 @@ export const getWaitingReportsForAdmin = async () => {
     rows[i].dateTimeISO = createdDisplay.dateTimeISO;
     try {
       const u = await getUserById(rows[i].userId.toString());
-      if (u && u.username) rows[i].username = u.username;
-      else rows[i].username = 'Unknown';
+      rows[i].username = u && u.username ? u.username : 'Unknown';
     } catch (err) {
       rows[i].username = 'Unknown';
     }
 
     rows[i].reportedContentText = 'Reported content no longer available';
     rows[i].contentAreaLabel = rows[i].forumOrLocation === 'location' ? 'Location' : 'Forum';
-    rows[i].contentTypeLabel = rows[i].typeOfContent === 'comment' ? 'Comment' : 'Post';
+    rows[i].contentTypeLabel = rows[i].typeOfContent === 'post'
+      ? 'Post'
+      : rows[i].typeOfContent === 'comment'
+        ? 'Comment'
+        : rows[i].typeOfContent === 'rating'
+          ? 'Rating'
+          : 'Status';
     rows[i].acceptLabel = rows[i].typeOfContent === 'comment'
       ? 'Accept and delete comment'
-      : (rows[i].forumOrLocation === 'location' ? 'Accept and delete location' : 'Accept and delete post');
+      : rows[i].typeOfContent === 'rating'
+        ? 'Accept and delete rating'
+        : rows[i].typeOfContent === 'status'
+          ? 'Accept and delete status'
+          : (rows[i].forumOrLocation === 'location' ? 'Accept and delete location' : 'Accept and delete post');
+
     try {
       if (rows[i].forumOrLocation === 'forum' && rows[i].typeOfContent === 'post' && rows[i].contentId) {
         const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].contentId.toString()) });
@@ -255,71 +288,48 @@ export const getWaitingReportsForAdmin = async () => {
           else if (titleText) rows[i].reportedContentText = titleText;
           else if (bodyText) rows[i].reportedContentText = bodyText;
         }
-<<<<<<< HEAD
-      } else if (rows[i].typeOfContent === 'comment' && rows[i].locationOrForumId && rows[i].contentId) {
-        if (rows[i].forumOrLocation === 'forum') {
-          const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
-          if (post) {
-            const comment = findCommentInPost(post, rows[i].contentId.toString());
-            if (comment) {
-              if (typeof comment.body === 'string' && comment.body.trim()) {
-                rows[i].reportedContentText = comment.body.trim();
-              }
-            }
-=======
       } else if (rows[i].forumOrLocation === 'forum' && rows[i].typeOfContent === 'comment' && rows[i].locationOrForumId && rows[i].contentId) {
         const post = await forumCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
         if (post) {
           const comment = findCommentInPost(post, rows[i].contentId.toString());
           if (comment && typeof comment.body === 'string' && comment.body.trim()) {
             rows[i].reportedContentText = comment.body.trim();
->>>>>>> 25d9fca (feat: added reports to location page)
           }
-          else {
-            // does not exist, reject the report automatically
-            await rejectReport(rows[i]._idStr, adminIdStr);
-            continue;
-          }
-        } else if (rows[i].forumOrLocation === 'location') {
-          const loc = await locationCollection.findOne({ _id: new ObjectId(rows[i].locationOrForumId.toString()) });
-          if (loc) {
-            const comment = findCommentInLocation(loc, rows[i].contentId.toString());
-            if (comment) {
-               if (typeof comment.body === 'string' && comment.body.trim()) {
-                rows[i].reportedContentText = comment.body.trim();
-              }
-            }
-          }
-          else {
-            // does not exist, reject the report 
-            await rejectReport(rows[i]._idStr, adminIdStr);
-            continue;
-          }   
         }
-      } else if (rows[i].forumOrLocation === 'location' && rows[i].typeOfContent === 'post' && rows[i].contentId) {
-        const loc = await getLocationById(rows[i].contentId.toString());
-        if (loc) {
+      } else if (rows[i].forumOrLocation === 'location' && rows[i].locationOrForumId) {
+        const loc = await getLocationById(rows[i].locationOrForumId.toString());
+        if (rows[i].typeOfContent === 'post' && rows[i].contentId) {
           const nameText = typeof loc.locationName === 'string' ? loc.locationName.trim() : '';
           const addressText = typeof loc.address === 'string' ? loc.address.trim() : '';
           const descriptionText = typeof loc.description === 'string' ? loc.description.trim() : '';
           const locationText = [nameText, addressText, descriptionText].filter(Boolean).join('\n\n');
           if (locationText) rows[i].reportedContentText = locationText;
-        }
-      } else if (rows[i].forumOrLocation === 'location' && rows[i].typeOfContent === 'comment' && rows[i].locationOrForumId && rows[i].contentId) {
-        const loc = await getLocationById(rows[i].locationOrForumId.toString());
-        if (loc && Array.isArray(loc.commentList)) {
-          const comment = loc.commentList.find((entry) => entry && entry._id && entry._id.toString() === rows[i].contentId.toString());
+        } else if (rows[i].typeOfContent === 'comment' && rows[i].contentId) {
+          const comment = findCommentInLocation(loc, rows[i].contentId.toString());
           if (comment && typeof comment.body === 'string' && comment.body.trim()) {
             rows[i].reportedContentText = comment.body.trim();
           }
+        } else if (rows[i].typeOfContent === 'rating' && rows[i].contentId) {
+          const rating = findRatingInLocation(loc, rows[i].contentId.toString());
+          if (rating) {
+            const scoreText = rating.score !== undefined && rating.score !== null ? String(rating.score) + '/5' : '';
+            const reviewText = typeof rating.review === 'string' ? rating.review.trim() : '';
+            const ratingText = [scoreText, reviewText].filter(Boolean).join('\n\n');
+            if (ratingText) rows[i].reportedContentText = ratingText;
+          }
+        } else if (rows[i].typeOfContent === 'status' && rows[i].contentId) {
+          const status = findStatusInLocation(loc, rows[i].contentId.toString());
+          if (status && typeof status.body === 'string' && status.body.trim()) {
+            rows[i].reportedContentText = status.body.trim();
+          }
         }
       }
-      finalRows.push(rows[i]);
     } catch (err) {
       rows[i].reportedContentText = 'Reported content no longer available';
     }
   }
-  return finalRows;
+
+  return rows;
 };
 
 export const acceptReport = async (reportId, adminUserId) => {
@@ -371,6 +381,24 @@ export const acceptReport = async (reportId, adminUserId) => {
       const { deleteLocationCommentByUser } = await import('./location.js');
       try {
         await deleteLocationCommentByUser(r.locationOrForumId.toString(), r.contentId.toString(), adminIdStr);
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else if (r.typeOfContent === 'rating') {
+      if (!r.locationOrForumId) throw new Error('Report missing location id');
+      if (!r.contentId) throw new Error('Report missing rating id');
+      const { deleteLocationRatingByUser } = await import('./location.js');
+      try {
+        await deleteLocationRatingByUser(r.locationOrForumId.toString(), r.contentId.toString(), adminIdStr);
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else if (r.typeOfContent === 'status') {
+      if (!r.locationOrForumId) throw new Error('Report missing location id');
+      if (!r.contentId) throw new Error('Report missing status id');
+      const { deleteLocationStatusByUser } = await import('./location.js');
+      try {
+        await deleteLocationStatusByUser(r.locationOrForumId.toString(), r.contentId.toString(), adminIdStr);
       } catch (err) {
         if (!isMissingTargetError(err)) throw err;
       }

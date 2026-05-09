@@ -17,6 +17,8 @@
   const radiusElement = document.getElementById('location-radius-filter');
   const autoGeolocateElement = document.getElementById('location-auto-geolocate');
   const useMyLocationButton = document.getElementById('location-use-my-location');
+  const createLocationForm = document.getElementById('locationCreateForm');
+  const createLocationFormError = document.getElementById('locationCreateFormError');
 
   const defaultCenter = [40.7128, -74.0060];
   const storageKey = 'cs546-location-page-state';
@@ -47,6 +49,49 @@
   fetchFavoriteLocations();
   updateNearbyLocations();
   if (autoGeolocateElement && autoGeolocateElement.checked) requestBrowserLocation();
+
+  function parseOptionalNumberValue(value) {
+    if (value === undefined || value === null) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const num = Number(text);
+    if (Number.isNaN(num)) return null;
+    return num;
+  }
+
+  function parseRequiredTextValue(value) {
+    if (typeof value !== 'string') return '';
+    return value.trim();
+  }
+
+  function validateLocationInputValues(values) {
+    const locationType = parseRequiredTextValue(values.locationType || '').toLowerCase();
+    if (!locationType) return 'Location type is required';
+    if (locationType !== 'tennis' && locationType !== 'basketball' && locationType !== 'handball' && locationType !== 'hiking') {
+      return 'Location type is invalid';
+    }
+
+    const locationName = parseRequiredTextValue(values.locationName || '');
+    if (!locationName) return 'Location name is required';
+
+    const latitudeText = parseRequiredTextValue(values.latitude || '');
+    const longitudeText = parseRequiredTextValue(values.longitude || '');
+    const latitude = parseOptionalNumberValue(latitudeText);
+    const longitude = parseOptionalNumberValue(longitudeText);
+
+    if (latitudeText && latitude === null) return 'Latitude must be a valid number';
+    if (longitudeText && longitude === null) return 'Longitude must be a valid number';
+    if (latitude !== null && (latitude < -90 || latitude > 90)) return 'Latitude must be between -90 and 90';
+    if (longitude !== null && (longitude < -180 || longitude > 180)) return 'Longitude must be between -180 and 180';
+
+    const numCourtsText = parseRequiredTextValue(values.numCourts || '');
+    if (numCourtsText) {
+      const numCourts = Number(numCourtsText);
+      if (Number.isNaN(numCourts) || !Number.isInteger(numCourts) || numCourts < 0) return 'Number of courts must be a non-negative whole number';
+    }
+
+    return '';
+  }
 
   function bindEvents() {
     document.addEventListener('submit', function (event) {
@@ -93,6 +138,23 @@
     map.on('click', function (event) {
       setCurrentPoint(event.latlng.lat, event.latlng.lng, 'Map selection');
     });
+
+    if (createLocationForm) {
+      createLocationForm.addEventListener('submit', function (event) {
+        if (createLocationFormError) createLocationFormError.textContent = '';
+        const errorText = validateLocationInputValues({
+          locationType: createLocationForm.elements.locationType ? createLocationForm.elements.locationType.value : '',
+          locationName: createLocationForm.elements.locationName ? createLocationForm.elements.locationName.value : '',
+          latitude: createLocationForm.elements.latitude ? createLocationForm.elements.latitude.value : '',
+          longitude: createLocationForm.elements.longitude ? createLocationForm.elements.longitude.value : '',
+          numCourts: createLocationForm.elements.numCourts ? createLocationForm.elements.numCourts.value : ''
+        });
+        if (errorText) {
+          event.preventDefault();
+          if (createLocationFormError) createLocationFormError.textContent = errorText;
+        }
+      });
+    }
   }
 
   function restorePageState() {
@@ -433,6 +495,7 @@
     html += '<section>';
     html += '<h4>Ratings and Reviews</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/rating" method="post">';
+    html += '<p id="locationRatingFormError" class="error" role="alert"></p>';
     html += '<p><label for="rating-score">Score</label><br>';
     html += '<select id="rating-score" name="score" required>';
     html += '<option value="" disabled selected>Select score</option>'
@@ -452,6 +515,7 @@
     html += '<section>';
     html += '<h4>Time Slots</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/timeslots/range" method="post">';
+    html += '<p id="locationTimeSlotFormError" class="error" role="alert"></p>';
     html += '<p><label for="slot-start">Start</label><br><input id="slot-start" type="datetime-local" name="startDateTime" step="900" required></p>';
     html += '<p><label for="slot-end">End</label><br><input id="slot-end" type="datetime-local" name="endDateTime" step="900" required></p>';
     html += '<p>Ranges snap to 15 minute blocks when saved.</p>';
@@ -463,6 +527,7 @@
     html += '<section>';
     html += '<h4>Status Updates</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/status" method="post">';
+    html += '<p id="locationStatusFormError" class="error" role="alert"></p>';
     html += '<p><label for="status-body">Status update</label><br><textarea id="status-body" name="body" rows="3" required></textarea></p>';
     html += '<p><button type="submit">Post status update</button></p>';
     html += '</form>';
@@ -477,7 +542,8 @@
     html += '<section>';
     html += '<h4>Coordination Comments</h4>';
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/comment" method="post">';
-    html += '<input type="hidden" name="parentId" value="">';
+      html += '<input type="hidden" name="parentId" value="">';
+    html += '<p id="locationCommentFormError" class="error" role="alert"></p>';
     html += '<p><label for="comment-body">Comment</label><br><textarea id="comment-body" name="body" rows="3" maxlength="5000" required></textarea></p>';
     html += '<p><button type="submit">Post comment</button></p>';
     html += '</form>';
@@ -486,6 +552,7 @@
     html += '<h4>Reply</h4>';
     html += '<form id="locationCommentReplyForm" action="/location/' + escapeAttribute(location._idStr) + '/comment" method="post">';
     html += '<input type="hidden" name="parentId" id="location-comment-reply-parentid" value="">';
+    html += '<p id="locationCommentReplyErrors" class="error" role="alert"></p>';
     html += '<p><label for="location-comment-reply-body">Your reply</label><br><textarea id="location-comment-reply-body" name="body" rows="4" maxlength="5000" required></textarea></p>';
     html += '<p><button type="submit">Reply</button> <button type="button" id="locationCommentReplyCancel">Cancel</button></p>';
     html += '</form>';
@@ -505,6 +572,40 @@
     html += '</select></p>';
     html += '<p><label for="location-comment-report-description">Description</label><br><textarea id="location-comment-report-description" name="description" rows="4" maxlength="2000"></textarea></p>';
     html += '<p><button type="submit">Submit report</button> <button type="button" id="locationCommentReportCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
+    html += '<dialog id="locationRatingReportDialog">';
+    html += '<h4>Report rating</h4>';
+    html += '<form id="locationRatingReportForm" action="/location/' + escapeAttribute(location._idStr) + '/rating/RATING_ID/report" method="post">';
+    html += '<p id="locationRatingReportErrors" class="error" role="alert"></p>';
+    html += '<p><label for="location-rating-report-reason">Reason for report</label><br>';
+    html += '<select id="location-rating-report-reason" name="reason">';
+    html += '<option value="" disabled selected>Select reason</option>';
+    html += '<option value="spam">Spam</option>';
+    html += '<option value="harassment">Harassment</option>';
+    html += '<option value="hate">Hate</option>';
+    html += '<option value="violence">Violence</option>';
+    html += '<option value="other">Other</option>';
+    html += '</select></p>';
+    html += '<p><label for="location-rating-report-description">Description</label><br><textarea id="location-rating-report-description" name="description" rows="4" maxlength="2000"></textarea></p>';
+    html += '<p><button type="submit">Submit report</button> <button type="button" id="locationRatingReportCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
+    html += '<dialog id="locationStatusReportDialog">';
+    html += '<h4>Report status</h4>';
+    html += '<form id="locationStatusReportForm" action="/location/' + escapeAttribute(location._idStr) + '/status/STATUS_ID/report" method="post">';
+    html += '<p id="locationStatusReportErrors" class="error" role="alert"></p>';
+    html += '<p><label for="location-status-report-reason">Reason for report</label><br>';
+    html += '<select id="location-status-report-reason" name="reason">';
+    html += '<option value="" disabled selected>Select reason</option>';
+    html += '<option value="spam">Spam</option>';
+    html += '<option value="harassment">Harassment</option>';
+    html += '<option value="hate">Hate</option>';
+    html += '<option value="violence">Violence</option>';
+    html += '<option value="other">Other</option>';
+    html += '</select></p>';
+    html += '<p><label for="location-status-report-description">Description</label><br><textarea id="location-status-report-description" name="description" rows="4" maxlength="2000"></textarea></p>';
+    html += '<p><button type="submit">Submit report</button> <button type="button" id="locationStatusReportCancel">Cancel</button></p>';
     html += '</form>';
     html += '</dialog>';
     html += '<dialog id="locationReportDialog">';
@@ -530,6 +631,7 @@
       html += '<section>';
       html += '<h4>Admin Edit Location</h4>';
       html += '<form action="/location/' + escapeAttribute(location._idStr) + '/update" method="post">';
+      html += '<p id="locationEditFormError" class="error" role="alert"></p>';
       html += '<p><label for="edit-location-type">Location type</label><br>';
       html += '<select id="edit-location-type" name="locationType" required>';
       html += '<option value="" disabled>Select location type</option>';
@@ -579,6 +681,7 @@
         html += '<form action="/location/' + escapeAttribute(locationIdStr) + '/rating/' + escapeAttribute(rating._idStr) + '/dislike" method="post">';
         html += '<button type="submit">Dislike (' + escapeHtml(String(rating.dislikeCount || 0)) + ')</button>';
         html += '</form>';
+        html += '<button type="button" class="locationRatingReportOpen" data-location-id="' + escapeAttribute(locationIdStr) + '" data-ratingid="' + escapeAttribute(rating._idStr) + '">Report</button>';
         if (canShowDeleteForOwnerContent(rating.isMine)) {
           html += '<form action="/location/' + escapeAttribute(locationIdStr) + '/rating/' + escapeAttribute(rating._idStr) + '/delete" method="post">';
           html += '<button type="submit">Delete rating</button>';
@@ -626,6 +729,7 @@
       html += '<input type="hidden" name="voteType" value="disagree">';
       html += '<button type="submit">Disagree (' + escapeHtml(String(status.disagreeCount || 0)) + ')</button>';
       html += '</form>';
+      html += '<button type="button" class="locationStatusReportOpen" data-location-id="' + escapeAttribute(location._idStr) + '" data-statusid="' + escapeAttribute(status._idStr) + '">Report</button>';
       if (canShowDeleteForOwnerContent(status.isMine)) {
         html += '<form action="/location/' + escapeAttribute(location._idStr) + '/status/' + escapeAttribute(status._idStr) + '/delete" method="post">';
         html += '<button type="submit">Delete status</button>';
@@ -678,8 +782,19 @@
     const replyForm = document.getElementById('locationCommentReplyForm');
     const replyParentInput = document.getElementById('location-comment-reply-parentid');
     const replyBodyInput = document.getElementById('location-comment-reply-body');
+    const replyErrors = document.getElementById('locationCommentReplyErrors');
     const replyCancel = document.getElementById('locationCommentReplyCancel');
     const replyButtons = detailPanelElement.getElementsByClassName('locationCommentReplyOpen');
+    const ratingForm = detailPanelElement.querySelector('form[action="/location/' + location._idStr + '/rating"]');
+    const ratingFormError = document.getElementById('locationRatingFormError');
+    const timeSlotForm = detailPanelElement.querySelector('form[action="/location/' + location._idStr + '/timeslots/range"]');
+    const timeSlotFormError = document.getElementById('locationTimeSlotFormError');
+    const statusForm = detailPanelElement.querySelector('form[action="/location/' + location._idStr + '/status"]');
+    const statusFormError = document.getElementById('locationStatusFormError');
+    const commentForm = detailPanelElement.querySelector('form[action="/location/' + location._idStr + '/comment"]');
+    const commentFormError = document.getElementById('locationCommentFormError');
+    const editForm = detailPanelElement.querySelector('form[action="/location/' + location._idStr + '/update"]');
+    const editFormError = document.getElementById('locationEditFormError');
     const reportDialog = document.getElementById('locationReportDialog');
     const reportForm = document.getElementById('locationReportForm');
     const reportOpen = document.getElementById('locationReportOpen');
@@ -694,6 +809,20 @@
     const commentReportDescription = document.getElementById('location-comment-report-description');
     const commentReportErrors = document.getElementById('locationCommentReportErrors');
     const commentReportButtons = detailPanelElement.getElementsByClassName('locationCommentReportOpen');
+    const ratingReportDialog = document.getElementById('locationRatingReportDialog');
+    const ratingReportForm = document.getElementById('locationRatingReportForm');
+    const ratingReportCancel = document.getElementById('locationRatingReportCancel');
+    const ratingReportReason = document.getElementById('location-rating-report-reason');
+    const ratingReportDescription = document.getElementById('location-rating-report-description');
+    const ratingReportErrors = document.getElementById('locationRatingReportErrors');
+    const ratingReportButtons = detailPanelElement.getElementsByClassName('locationRatingReportOpen');
+    const statusReportDialog = document.getElementById('locationStatusReportDialog');
+    const statusReportForm = document.getElementById('locationStatusReportForm');
+    const statusReportCancel = document.getElementById('locationStatusReportCancel');
+    const statusReportReason = document.getElementById('location-status-report-reason');
+    const statusReportDescription = document.getElementById('location-status-report-description');
+    const statusReportErrors = document.getElementById('locationStatusReportErrors');
+    const statusReportButtons = detailPanelElement.getElementsByClassName('locationStatusReportOpen');
 
     function resetLocationReportForm() {
       if (reportReason) reportReason.selectedIndex = 0;
@@ -707,6 +836,25 @@
       if (commentReportErrors) commentReportErrors.textContent = '';
     }
 
+    function resetLocationRatingReportForm() {
+      if (ratingReportReason) ratingReportReason.selectedIndex = 0;
+      if (ratingReportDescription) ratingReportDescription.value = '';
+      if (ratingReportErrors) ratingReportErrors.textContent = '';
+    }
+
+    function resetLocationStatusReportForm() {
+      if (statusReportReason) statusReportReason.selectedIndex = 0;
+      if (statusReportDescription) statusReportDescription.value = '';
+      if (statusReportErrors) statusReportErrors.textContent = '';
+    }
+
+    function validateRequiredBodyValue(value, emptyMessage, tooLongMessage, maxLength) {
+      const text = parseRequiredTextValue(value);
+      if (!text) return emptyMessage;
+      if (typeof maxLength === 'number' && text.length > maxLength) return tooLongMessage;
+      return '';
+    }
+
     for (let i = 0; i < replyButtons.length; i++) {
       replyButtons[i].addEventListener('click', function () {
         const locationId = this.getAttribute('data-location-id') || location._idStr;
@@ -714,6 +862,7 @@
         if (replyForm && locationId) replyForm.setAttribute('action', '/location/' + locationId + '/comment');
         if (replyParentInput) replyParentInput.value = commentId;
         if (replyBodyInput) replyBodyInput.value = '';
+        if (replyErrors) replyErrors.textContent = '';
         if (replyDialog && replyDialog.showModal) replyDialog.showModal();
         else if (replyDialog) replyDialog.setAttribute('open', '');
       });
@@ -740,12 +889,36 @@
       });
     }
 
+    for (let i = 0; i < ratingReportButtons.length; i++) {
+      ratingReportButtons[i].addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        const ratingId = this.getAttribute('data-ratingid') || '';
+        resetLocationRatingReportForm();
+        if (ratingReportForm && locationId && ratingId) ratingReportForm.setAttribute('action', '/location/' + locationId + '/rating/' + ratingId + '/report');
+        if (ratingReportDialog && ratingReportDialog.showModal) ratingReportDialog.showModal();
+        else if (ratingReportDialog) ratingReportDialog.setAttribute('open', '');
+      });
+    }
+
+    for (let i = 0; i < statusReportButtons.length; i++) {
+      statusReportButtons[i].addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        const statusId = this.getAttribute('data-statusid') || '';
+        resetLocationStatusReportForm();
+        if (statusReportForm && locationId && statusId) statusReportForm.setAttribute('action', '/location/' + locationId + '/status/' + statusId + '/report');
+        if (statusReportDialog && statusReportDialog.showModal) statusReportDialog.showModal();
+        else if (statusReportDialog) statusReportDialog.setAttribute('open', '');
+      });
+    }
+
     if (replyCancel && replyDialog && replyDialog.close) {
       replyCancel.addEventListener('click', function () {
+        if (replyErrors) replyErrors.textContent = '';
         replyDialog.close();
       });
     } else if (replyCancel && replyDialog) {
       replyCancel.addEventListener('click', function () {
+        if (replyErrors) replyErrors.textContent = '';
         replyDialog.removeAttribute('open');
       });
     }
@@ -771,6 +944,30 @@
       commentReportCancel.addEventListener('click', function () {
         resetLocationCommentReportForm();
         commentReportDialog.removeAttribute('open');
+      });
+    }
+
+    if (ratingReportCancel && ratingReportDialog && ratingReportDialog.close) {
+      ratingReportCancel.addEventListener('click', function () {
+        resetLocationRatingReportForm();
+        ratingReportDialog.close();
+      });
+    } else if (ratingReportCancel && ratingReportDialog) {
+      ratingReportCancel.addEventListener('click', function () {
+        resetLocationRatingReportForm();
+        ratingReportDialog.removeAttribute('open');
+      });
+    }
+
+    if (statusReportCancel && statusReportDialog && statusReportDialog.close) {
+      statusReportCancel.addEventListener('click', function () {
+        resetLocationStatusReportForm();
+        statusReportDialog.close();
+      });
+    } else if (statusReportCancel && statusReportDialog) {
+      statusReportCancel.addEventListener('click', function () {
+        resetLocationStatusReportForm();
+        statusReportDialog.removeAttribute('open');
       });
     }
 
@@ -808,6 +1005,166 @@
         if (reason === 'other' && !description) {
           event.preventDefault();
           if (commentReportErrors) commentReportErrors.textContent = 'Error: Enter a description,';
+        }
+      });
+    }
+
+    if (ratingReportForm) {
+      ratingReportForm.addEventListener('submit', function (event) {
+        let reason = '';
+        if (ratingReportReason && ratingReportReason.value) reason = String(ratingReportReason.value).trim();
+        let description = '';
+        if (ratingReportDescription && ratingReportDescription.value) description = ratingReportDescription.value.trim();
+        if (ratingReportErrors) ratingReportErrors.textContent = '';
+        if (!reason) {
+          event.preventDefault();
+          if (ratingReportErrors) ratingReportErrors.textContent = 'Error: Select a reason,';
+          return;
+        }
+        if (reason === 'other' && !description) {
+          event.preventDefault();
+          if (ratingReportErrors) ratingReportErrors.textContent = 'Error: Enter a description,';
+        }
+      });
+    }
+
+    if (statusReportForm) {
+      statusReportForm.addEventListener('submit', function (event) {
+        let reason = '';
+        if (statusReportReason && statusReportReason.value) reason = String(statusReportReason.value).trim();
+        let description = '';
+        if (statusReportDescription && statusReportDescription.value) description = statusReportDescription.value.trim();
+        if (statusReportErrors) statusReportErrors.textContent = '';
+        if (!reason) {
+          event.preventDefault();
+          if (statusReportErrors) statusReportErrors.textContent = 'Error: Select a reason,';
+          return;
+        }
+        if (reason === 'other' && !description) {
+          event.preventDefault();
+          if (statusReportErrors) statusReportErrors.textContent = 'Error: Enter a description,';
+        }
+      });
+    }
+
+    if (ratingForm) {
+      ratingForm.addEventListener('submit', function (event) {
+        if (ratingFormError) ratingFormError.textContent = '';
+        const score = ratingForm.elements.score ? String(ratingForm.elements.score.value || '').trim() : '';
+        const review = ratingForm.elements.review ? String(ratingForm.elements.review.value || '').trim() : '';
+        if (!score) {
+          event.preventDefault();
+          if (ratingFormError) ratingFormError.textContent = 'Rating score is required';
+          return;
+        }
+        const scoreNum = Number(score);
+        if (Number.isNaN(scoreNum) || !Number.isInteger(scoreNum) || scoreNum < 1 || scoreNum > 5) {
+          event.preventDefault();
+          if (ratingFormError) ratingFormError.textContent = 'Rating score must be between 1 and 5';
+          return;
+        }
+        if (!review) {
+          event.preventDefault();
+          if (ratingFormError) ratingFormError.textContent = 'Review is required';
+        }
+      });
+    }
+
+    if (timeSlotForm) {
+      timeSlotForm.addEventListener('submit', function (event) {
+        if (timeSlotFormError) timeSlotFormError.textContent = '';
+        const startDateTime = timeSlotForm.elements.startDateTime ? String(timeSlotForm.elements.startDateTime.value || '').trim() : '';
+        const endDateTime = timeSlotForm.elements.endDateTime ? String(timeSlotForm.elements.endDateTime.value || '').trim() : '';
+        if (!startDateTime) {
+          event.preventDefault();
+          if (timeSlotFormError) timeSlotFormError.textContent = 'Start date and time is required';
+          return;
+        }
+        if (!endDateTime) {
+          event.preventDefault();
+          if (timeSlotFormError) timeSlotFormError.textContent = 'End date and time is required';
+          return;
+        }
+        const startDate = new Date(startDateTime);
+        const endDate = new Date(endDateTime);
+        if (Number.isNaN(startDate.getTime())) {
+          event.preventDefault();
+          if (timeSlotFormError) timeSlotFormError.textContent = 'Start date and time is invalid';
+          return;
+        }
+        if (Number.isNaN(endDate.getTime())) {
+          event.preventDefault();
+          if (timeSlotFormError) timeSlotFormError.textContent = 'End date and time is invalid';
+          return;
+        }
+        if (endDate <= startDate) {
+          event.preventDefault();
+          if (timeSlotFormError) timeSlotFormError.textContent = 'End time must be after start time';
+        }
+      });
+    }
+
+    if (statusForm) {
+      statusForm.addEventListener('submit', function (event) {
+        if (statusFormError) statusFormError.textContent = '';
+        const errorText = validateRequiredBodyValue(
+          statusForm.elements.body ? statusForm.elements.body.value : '',
+          'Status update is required',
+          '',
+          null
+        );
+        if (errorText) {
+          event.preventDefault();
+          if (statusFormError) statusFormError.textContent = errorText;
+        }
+      });
+    }
+
+    if (commentForm) {
+      commentForm.addEventListener('submit', function (event) {
+        if (commentFormError) commentFormError.textContent = '';
+        const errorText = validateRequiredBodyValue(
+          commentForm.elements.body ? commentForm.elements.body.value : '',
+          'Comment body is required',
+          'Comment is too long',
+          5000
+        );
+        if (errorText) {
+          event.preventDefault();
+          if (commentFormError) commentFormError.textContent = errorText;
+        }
+      });
+    }
+
+    if (replyForm) {
+      replyForm.addEventListener('submit', function (event) {
+        if (replyErrors) replyErrors.textContent = '';
+        const errorText = validateRequiredBodyValue(
+          replyForm.elements.body ? replyForm.elements.body.value : '',
+          'Comment body is required',
+          'Comment is too long',
+          5000
+        );
+        if (errorText) {
+          event.preventDefault();
+          if (replyErrors) replyErrors.textContent = errorText;
+        }
+      });
+    }
+
+    if (editForm) {
+      editForm.addEventListener('submit', function (event) {
+        if (editFormError) editFormError.textContent = '';
+        const errorText = validateLocationInputValues({
+          locationType: editForm.elements.locationType ? editForm.elements.locationType.value : '',
+          locationName: editForm.elements.locationName ? editForm.elements.locationName.value : '',
+          latitude: editForm.elements.latitude ? editForm.elements.latitude.value : '',
+          longitude: editForm.elements.longitude ? editForm.elements.longitude.value : '',
+          numCourts: editForm.elements.numCourts ? editForm.elements.numCourts.value : ''
+        });
+        if (errorText) {
+          event.preventDefault();
+          if (editFormError) editFormError.textContent = errorText;
         }
       });
     }
