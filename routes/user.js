@@ -81,6 +81,9 @@ router
     }),
     body('password').notEmpty().withMessage("Enter a not empty password").custom(async value => {
       value = await validatePasswordField(value);
+    }),
+    body('confirmPassword').notEmpty().withMessage("Enter a not empty password").custom(async value => {
+      value = await validatePasswordField(value);
     })
   ], async (req, res) => {
     //code here for POST
@@ -89,9 +92,12 @@ router
     if (!errors.isEmpty()) {
       return res.status(400).render('register', {layout: 'main.handlebars', "loggedIn": req.user, title: 'Register', error: 'Error registering user: ' + errors.array()[0]['msg'] });
     }
-    const { username, password } = req.body; // Need to ensure username and password exist
+    const { username, password, confirmPassword } = req.body; // Need to ensure username and password exist
 
     try {
+      if (password != confirmPassword) {
+	      throw Error("Passwords do not match!");
+      }
       const user = await registerUser(username, password);
 
       // res.status(201).json({ message: 'User registered successfully' });
