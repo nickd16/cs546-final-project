@@ -11,6 +11,8 @@
         {{#each postReports}}
         <li>
             <p><strong>Report Id:</strong> {{this._id}}</p>
+            <p><strong>Area:</strong> {{this.contentAreaLabel}}</p>
+            <p><strong>Content Type:</strong> {{this.contentTypeLabel}}</p>
             <p><strong>Content Id:</strong> {{this.contentId}}</p>
             <p><strong>Reported By:</strong> {{this.username}} ({{this.userId}})</p>
             <p><strong>Created:</strong> {{this.dateTimeLabel}}</p>
@@ -20,7 +22,7 @@
             <p><strong>Description:</strong></p>
             <pre>{{this.body}}</pre>
             <form action="/report/{{this._idStr}}/accept" method="post">
-                <button type="submit">Accept and delete post</button>
+                <button type="submit">{{this.acceptLabel}}</button>
             </form>
             <form action="/report/{{this._idStr}}/reject" method="post">
                 <button type="submit">Reject</button>
@@ -39,6 +41,8 @@
         {{#each commentReports}}
         <li>
             <p><strong>Report Id:</strong> {{this._id}}</p>
+            <p><strong>Area:</strong> {{this.contentAreaLabel}}</p>
+            <p><strong>Content Type:</strong> {{this.contentTypeLabel}}</p>
             <p><strong>Content Id:</strong> {{this.contentId}}</p>
             <p><strong>Reported By:</strong> {{this.username}} ({{this.userId}})</p>
             <p><strong>Created:</strong> {{this.dateTimeLabel}}</p>
@@ -48,7 +52,7 @@
             <p><strong>Description:</strong></p>
             <pre>{{this.body}}</pre>
             <form action="/report/{{this._idStr}}/accept" method="post">
-                <button type="submit">Accept and delete comment</button>
+                <button type="submit">{{this.acceptLabel}}</button>
             </form>
             <form action="/report/{{this._idStr}}/reject" method="post">
                 <button type="submit">Reject</button>
@@ -61,4 +65,3 @@
     <p>Nothing there</p>
     {{/if}}
 </div>
-

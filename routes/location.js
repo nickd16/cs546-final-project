@@ -22,6 +22,7 @@ import {
   updateLocationById,
   voteOnLocationStatus
 } from '../data/location.js';
+import { createLocationCommentReport, createLocationPostReport } from '../data/report.js';
 import {authMW, authRedirectMW} from './middleware.js';
 import { body, check, query, validationResult } from 'express-validator';
 import { validateIdField } from '../helpers.js';
@@ -420,6 +421,43 @@ router.post('/:locationId/comment/:commentId/dislike', [authRedirectMW,
     return locationPageRedirect(res, req.params.locationId, '', '');
   } catch (e) {
     return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update dislike'), '');
+  }
+});
+
+router.post('/:locationId/report', [authRedirectMW,
+  check('locationId').notEmpty().custom(async value => {
+    value = await validateIdField(value);
+  }),
+  body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
+  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await createLocationPostReport(userIdFromSession(req), req.params.locationId, req.body.reason, req.body.description);
+    return locationPageRedirect(res, req.params.locationId, '', 'Report submitted');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not submit report'), '');
+  }
+});
+
+router.post('/:locationId/comment/:commentId/report', [authRedirectMW,
+  check('locationId').notEmpty().custom(async value => {
+    value = await validateIdField(value);
+  }),
+  check('commentId').notEmpty().custom(async value => {
+    value = await validateIdField(value);
+  }),
+  body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
+  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await createLocationCommentReport(userIdFromSession(req), req.params.locationId, req.params.commentId, req.body.reason, req.body.description);
+    return locationPageRedirect(res, req.params.locationId, '', 'Report submitted');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not submit report'), '');
   }
 });
 

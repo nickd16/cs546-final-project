@@ -424,6 +424,7 @@
     html += '<p><strong>Details:</strong> ' + escapeHtml(buildLocationMetaText(location)) + '</p>';
     html += '<p><a href="/forum?catagoryFilter=' + encodeURIComponent(location.locationType) + '">Open ' + escapeHtml(location.locationType || 'all') + ' forum</a></p>';
     html += '<p><a href="/request">Request a new nearby location</a></p>';
+    html += '<p><button type="button" id="locationReportOpen" data-location-id="' + escapeAttribute(location._idStr) + '">Report</button></p>';
 
     html += '<form action="/location/' + escapeAttribute(location._idStr) + '/favorite" method="post">';
     html += '<button type="submit">' + (location.isFavorite ? 'Unfavorite location' : 'Favorite location') + '</button>';
@@ -487,6 +488,40 @@
     html += '<input type="hidden" name="parentId" id="location-comment-reply-parentid" value="">';
     html += '<p><label for="location-comment-reply-body">Your reply</label><br><textarea id="location-comment-reply-body" name="body" rows="4" maxlength="5000" required></textarea></p>';
     html += '<p><button type="submit">Reply</button> <button type="button" id="locationCommentReplyCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
+    html += '<dialog id="locationCommentReportDialog">';
+    html += '<h4>Report comment</h4>';
+    html += '<form id="locationCommentReportForm" action="/location/' + escapeAttribute(location._idStr) + '/comment/COMMENT_ID/report" method="post">';
+    html += '<p id="locationCommentReportErrors" class="error" role="alert"></p>';
+    html += '<p><label for="location-comment-report-reason">Reason for report</label><br>';
+    html += '<select id="location-comment-report-reason" name="reason">';
+    html += '<option value="" disabled selected>Select reason</option>';
+    html += '<option value="spam">Spam</option>';
+    html += '<option value="harassment">Harassment</option>';
+    html += '<option value="hate">Hate</option>';
+    html += '<option value="violence">Violence</option>';
+    html += '<option value="other">Other</option>';
+    html += '</select></p>';
+    html += '<p><label for="location-comment-report-description">Description</label><br><textarea id="location-comment-report-description" name="description" rows="4" maxlength="2000"></textarea></p>';
+    html += '<p><button type="submit">Submit report</button> <button type="button" id="locationCommentReportCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
+    html += '<dialog id="locationReportDialog">';
+    html += '<h4>Report</h4>';
+    html += '<form id="locationReportForm" action="/location/' + escapeAttribute(location._idStr) + '/report" method="post">';
+    html += '<p id="locationReportErrors" class="error" role="alert"></p>';
+    html += '<p><label for="location-report-reason">Reason for report</label><br>';
+    html += '<select id="location-report-reason" name="reason">';
+    html += '<option value="" disabled selected>Select reason</option>';
+    html += '<option value="spam">Spam</option>';
+    html += '<option value="harassment">Harassment</option>';
+    html += '<option value="hate">Hate</option>';
+    html += '<option value="violence">Violence</option>';
+    html += '<option value="other">Other</option>';
+    html += '</select></p>';
+    html += '<p><label for="location-report-description">Description</label><br><textarea id="location-report-description" name="description" rows="4" maxlength="2000"></textarea></p>';
+    html += '<p><button type="submit">Submit report</button> <button type="button" id="locationReportCancel">Cancel</button></p>';
     html += '</form>';
     html += '</dialog>';
     html += '</section>';
@@ -622,6 +657,7 @@
       html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/dislike" method="post">';
       html += '<button type="submit">Dislike (' + escapeHtml(String(comment.dislikeCount || 0)) + ')</button>';
       html += '</form>';
+      html += '<button type="button" class="locationCommentReportOpen" data-location-id="' + escapeAttribute(locationId) + '" data-commentid="' + escapeAttribute(comment._idStr) + '">Report</button>';
       html += '<button type="button" class="locationCommentReplyOpen" data-location-id="' + escapeAttribute(locationId) + '" data-commentid="' + escapeAttribute(comment._idStr) + '">Reply</button>';
       if (canShowDeleteForOwnerContent(comment.isMine)) {
         html += '<form action="/location/' + escapeAttribute(locationId) + '/comment/' + escapeAttribute(comment._idStr) + '/delete" method="post">';
@@ -644,6 +680,32 @@
     const replyBodyInput = document.getElementById('location-comment-reply-body');
     const replyCancel = document.getElementById('locationCommentReplyCancel');
     const replyButtons = detailPanelElement.getElementsByClassName('locationCommentReplyOpen');
+    const reportDialog = document.getElementById('locationReportDialog');
+    const reportForm = document.getElementById('locationReportForm');
+    const reportOpen = document.getElementById('locationReportOpen');
+    const reportCancel = document.getElementById('locationReportCancel');
+    const reportReason = document.getElementById('location-report-reason');
+    const reportDescription = document.getElementById('location-report-description');
+    const reportErrors = document.getElementById('locationReportErrors');
+    const commentReportDialog = document.getElementById('locationCommentReportDialog');
+    const commentReportForm = document.getElementById('locationCommentReportForm');
+    const commentReportCancel = document.getElementById('locationCommentReportCancel');
+    const commentReportReason = document.getElementById('location-comment-report-reason');
+    const commentReportDescription = document.getElementById('location-comment-report-description');
+    const commentReportErrors = document.getElementById('locationCommentReportErrors');
+    const commentReportButtons = detailPanelElement.getElementsByClassName('locationCommentReportOpen');
+
+    function resetLocationReportForm() {
+      if (reportReason) reportReason.selectedIndex = 0;
+      if (reportDescription) reportDescription.value = '';
+      if (reportErrors) reportErrors.textContent = '';
+    }
+
+    function resetLocationCommentReportForm() {
+      if (commentReportReason) commentReportReason.selectedIndex = 0;
+      if (commentReportDescription) commentReportDescription.value = '';
+      if (commentReportErrors) commentReportErrors.textContent = '';
+    }
 
     for (let i = 0; i < replyButtons.length; i++) {
       replyButtons[i].addEventListener('click', function () {
@@ -657,6 +719,27 @@
       });
     }
 
+    if (reportOpen) {
+      reportOpen.addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        resetLocationReportForm();
+        if (reportForm && locationId) reportForm.setAttribute('action', '/location/' + locationId + '/report');
+        if (reportDialog && reportDialog.showModal) reportDialog.showModal();
+        else if (reportDialog) reportDialog.setAttribute('open', '');
+      });
+    }
+
+    for (let i = 0; i < commentReportButtons.length; i++) {
+      commentReportButtons[i].addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        const commentId = this.getAttribute('data-commentid') || '';
+        resetLocationCommentReportForm();
+        if (commentReportForm && locationId && commentId) commentReportForm.setAttribute('action', '/location/' + locationId + '/comment/' + commentId + '/report');
+        if (commentReportDialog && commentReportDialog.showModal) commentReportDialog.showModal();
+        else if (commentReportDialog) commentReportDialog.setAttribute('open', '');
+      });
+    }
+
     if (replyCancel && replyDialog && replyDialog.close) {
       replyCancel.addEventListener('click', function () {
         replyDialog.close();
@@ -664,6 +747,68 @@
     } else if (replyCancel && replyDialog) {
       replyCancel.addEventListener('click', function () {
         replyDialog.removeAttribute('open');
+      });
+    }
+
+    if (reportCancel && reportDialog && reportDialog.close) {
+      reportCancel.addEventListener('click', function () {
+        resetLocationReportForm();
+        reportDialog.close();
+      });
+    } else if (reportCancel && reportDialog) {
+      reportCancel.addEventListener('click', function () {
+        resetLocationReportForm();
+        reportDialog.removeAttribute('open');
+      });
+    }
+
+    if (commentReportCancel && commentReportDialog && commentReportDialog.close) {
+      commentReportCancel.addEventListener('click', function () {
+        resetLocationCommentReportForm();
+        commentReportDialog.close();
+      });
+    } else if (commentReportCancel && commentReportDialog) {
+      commentReportCancel.addEventListener('click', function () {
+        resetLocationCommentReportForm();
+        commentReportDialog.removeAttribute('open');
+      });
+    }
+
+    if (reportForm) {
+      reportForm.addEventListener('submit', function (event) {
+        let reason = '';
+        if (reportReason && reportReason.value) reason = String(reportReason.value).trim();
+        let description = '';
+        if (reportDescription && reportDescription.value) description = reportDescription.value.trim();
+        if (reportErrors) reportErrors.textContent = '';
+        if (!reason) {
+          event.preventDefault();
+          if (reportErrors) reportErrors.textContent = 'Error: Select a reason,';
+          return;
+        }
+        if (reason === 'other' && !description) {
+          event.preventDefault();
+          if (reportErrors) reportErrors.textContent = 'Error: Enter a description,';
+        }
+      });
+    }
+
+    if (commentReportForm) {
+      commentReportForm.addEventListener('submit', function (event) {
+        let reason = '';
+        if (commentReportReason && commentReportReason.value) reason = String(commentReportReason.value).trim();
+        let description = '';
+        if (commentReportDescription && commentReportDescription.value) description = commentReportDescription.value.trim();
+        if (commentReportErrors) commentReportErrors.textContent = '';
+        if (!reason) {
+          event.preventDefault();
+          if (commentReportErrors) commentReportErrors.textContent = 'Error: Select a reason,';
+          return;
+        }
+        if (reason === 'other' && !description) {
+          event.preventDefault();
+          if (commentReportErrors) commentReportErrors.textContent = 'Error: Enter a description,';
+        }
       });
     }
   }
