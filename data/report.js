@@ -51,7 +51,7 @@ const validateReportReasonAndDescription = (reason, description) => {
   if (cleanReason !== 'spam' && cleanReason !== 'harassment' && cleanReason !== 'hate' && cleanReason !== 'violence' && cleanReason !== 'other') {
     throw new Error('Invalid report reason');
   }
-  if (cleanReason === 'other' && !cleanDescription) throw new Error('Error: Enter a description,');
+  if (!cleanDescription) throw new Error('Error: Enter a description,');
   if (cleanDescription.length > 2000) throw new Error('Description too long');
   return { cleanReason, cleanDescription };
 };

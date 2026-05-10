@@ -1128,7 +1128,7 @@
           if (reportErrors) reportErrors.textContent = 'Error: Select a reason,';
           return;
         }
-        if (reason === 'other' && !description) {
+        if (!description) {
           event.preventDefault();
           if (reportErrors) reportErrors.textContent = 'Error: Enter a description,';
         }
@@ -1147,7 +1147,7 @@
           if (commentReportErrors) commentReportErrors.textContent = 'Error: Select a reason,';
           return;
         }
-        if (reason === 'other' && !description) {
+        if (!description) {
           event.preventDefault();
           if (commentReportErrors) commentReportErrors.textContent = 'Error: Enter a description,';
         }
@@ -1166,7 +1166,7 @@
           if (ratingReportErrors) ratingReportErrors.textContent = 'Error: Select a reason,';
           return;
         }
-        if (reason === 'other' && !description) {
+        if (!description) {
           event.preventDefault();
           if (ratingReportErrors) ratingReportErrors.textContent = 'Error: Enter a description,';
         }
@@ -1185,7 +1185,7 @@
           if (ratingReplyReportErrors) ratingReplyReportErrors.textContent = 'Error: Select a reason,';
           return;
         }
-        if (reason === 'other' && !description) {
+        if (!description) {
           event.preventDefault();
           if (ratingReplyReportErrors) ratingReplyReportErrors.textContent = 'Error: Enter a description,';
         }
@@ -1204,7 +1204,7 @@
           if (statusReportErrors) statusReportErrors.textContent = 'Error: Select a reason,';
           return;
         }
-        if (reason === 'other' && !description) {
+        if (!description) {
           event.preventDefault();
           if (statusReportErrors) statusReportErrors.textContent = 'Error: Enter a description,';
         }

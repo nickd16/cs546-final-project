@@ -327,7 +327,7 @@
             if (errEl) errEl.textContent = 'Error: Select a reason,';
             return;
           }
-          if (reason === 'other' && !desc) {
+          if (!desc) {
             if (errEl) errEl.textContent = 'Error: Enter a description,';
             return;
           }
@@ -357,7 +357,7 @@
             if (errEl2) errEl2.textContent = 'Error: Select a reason,';
             return;
           }
-          if (reason2 === 'other' && !desc2) {
+          if (!desc2) {
             if (errEl2) errEl2.textContent = 'Error: Enter a description,';
             return;
           }

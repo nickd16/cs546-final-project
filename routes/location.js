@@ -433,7 +433,19 @@ router.post('/:locationId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -453,7 +465,19 @@ router.post('/:locationId/comment/:commentId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -473,7 +497,19 @@ router.post('/:locationId/rating/:ratingId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -559,7 +595,19 @@ router.post('/:locationId/rating/:ratingId/reply/:replyId/report', [authRedirect
     await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string'),
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -624,7 +672,19 @@ router.post('/:locationId/status/:statusId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
