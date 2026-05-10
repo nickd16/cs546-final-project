@@ -18,6 +18,12 @@
             <form action="/forum/{{_idStr}}/delete" method="post">
                 <button type="submit">Delete</button>
             </form>
+            {{else}}
+            {{#if @root.isAdmin}}
+            <form action="/forum/{{_idStr}}/delete" method="post">
+                <button type="submit">Delete</button>
+            </form>
+            {{/if}}
             {{/if}}
             <button type="button" class="forumReportOpen" data-postid="{{_idStr}}">Report</button>
         </div>

@@ -13,6 +13,10 @@ import {
   toggleLikeLocationRating,
   toggleDislikeLocationRating,
   deleteLocationRatingByUser,
+  addLocationRatingReply,
+  deleteLocationRatingReplyByUser,
+  toggleLikeLocationRatingReply,
+  toggleDislikeLocationRatingReply,
   deleteLocationStatusByUser,
   getFavoriteLocations,
   getLocationDetailsForDisplay,
@@ -22,7 +26,7 @@ import {
   updateLocationById,
   voteOnLocationStatus
 } from '../data/location.js';
-import { createLocationCommentReport, createLocationPostReport, createLocationRatingReport, createLocationStatusReport } from '../data/report.js';
+import { createLocationCommentReport, createLocationPostReport, createLocationRatingReport, createLocationRatingReplyReport, createLocationStatusReport } from '../data/report.js';
 import {authMW, authRedirectMW} from './middleware.js';
 import { body, check, query, validationResult } from 'express-validator';
 import { validateIdField } from '../helpers.js';
@@ -429,7 +433,19 @@ router.post('/:locationId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -449,7 +465,19 @@ router.post('/:locationId/comment/:commentId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -469,7 +497,19 @@ router.post('/:locationId/rating/:ratingId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);
@@ -481,6 +521,149 @@ router.post('/:locationId/rating/:ratingId/report', [authRedirectMW,
   }
 });
 
+router.post('/:locationId/rating/:ratingId/reply/:replyId/delete', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('replyId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await deleteLocationRatingReplyByUser(req.params.locationId, req.params.ratingId, req.params.replyId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', 'Reply removed');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not remove reply'), '');
+  }
+});
+
+router.post('/:locationId/rating/:ratingId/reply/:replyId/like', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('replyId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await toggleLikeLocationRatingReply(req.params.locationId, req.params.ratingId, req.params.replyId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', '');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update like'), '');
+  }
+});
+
+router.post('/:locationId/rating/:ratingId/reply/:replyId/dislike', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('replyId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await toggleDislikeLocationRatingReply(req.params.locationId, req.params.ratingId, req.params.replyId, userIdFromSession(req));
+    return locationPageRedirect(res, req.params.locationId, '', '');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not update dislike'), '');
+  }
+});
+
+router.post('/:locationId/rating/:ratingId/reply/:replyId/report', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('replyId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    await createLocationRatingReplyReport(
+      userIdFromSession(req),
+      req.params.locationId,
+      req.params.ratingId,
+      req.params.replyId,
+      req.body.reason,
+      req.body.description,
+    );
+    return locationPageRedirect(res, req.params.locationId, '', 'Report submitted');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not submit report'), '');
+  }
+});
+
+router.post('/:locationId/rating/:ratingId/reply', [authRedirectMW,
+  check('locationId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  check('ratingId').notEmpty().custom(async (value) => {
+    await validateIdField(value);
+  }),
+  body('body')
+    .exists({values: 'falsy'})
+    .withMessage('Reply body is required')
+    .bail()
+    .isString()
+    .withMessage('Reply body must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Reply body is required'),
+  body('parentId').optional({values: 'falsy'}).custom(async (value) => {
+    if (value === undefined || value === null || value === '') return true;
+    if (typeof value !== 'string') throw Error('Parent reply id must be a string');
+    const t = value.trim();
+    if (!t) return true;
+    await validateIdField(t);
+    return true;
+  }),
+], async (req, res) => {
+  try {
+    const error = locationValidationErrorText(req);
+    if (error) return locationPageRedirect(res, req.params.locationId, error, '');
+    let parentId = '';
+    if (req.body.parentId !== undefined && req.body.parentId !== null) parentId = String(req.body.parentId).trim();
+    await addLocationRatingReply(req.params.locationId, req.params.ratingId, userIdFromSession(req), req.body.body, parentId);
+    return locationPageRedirect(res, req.params.locationId, '', 'Reply posted');
+  } catch (e) {
+    return locationPageRedirect(res, req.params.locationId, errorTextFromCatch(e, 'Could not post reply'), '');
+  }
+});
+
 router.post('/:locationId/status/:statusId/report', [authRedirectMW,
   check('locationId').notEmpty().custom(async value => {
     value = await validateIdField(value);
@@ -489,7 +672,19 @@ router.post('/:locationId/status/:statusId/report', [authRedirectMW,
     value = await validateIdField(value);
   }),
   body('reason').notEmpty().withMessage('Reason is required').isString().withMessage('Reason must be a string'),
-  body('description').optional({values: 'falsy'}).isString().withMessage('Description must be a string')
+  body('description')
+    .exists({ values: 'falsy' })
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isString()
+    .withMessage('Description must be a string')
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage('Error: Enter a description,')
+    .bail()
+    .isLength({ max: 2000 })
+    .withMessage('Description too long'),
 ], async (req, res) => {
   try {
     const error = locationValidationErrorText(req);

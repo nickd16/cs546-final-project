@@ -428,8 +428,14 @@ export const deleteCommentByUser = async (postId, commentId, userId) => {
   if (!post) throw new Error('Post not found');
 
   const c = findCommentInPost(post, commentId);
-  if (!c) throw new Error('Comment not found');
-  if (!c.userId || c.userId.toString() !== userIdStr) throw new Error('You can only delete your own comment');
+  if (!c) return true;
+
+  let canDelete = false;
+  if (c.userId && c.userId.toString() === userIdStr) canDelete = true;
+  const userCollection = await userCollectionFn();
+  const userDoc = await userCollection.findOne({ _id: new ObjectId(userIdStr) });
+  if (userDoc && userDoc.isAdmin) canDelete = true;
+  if (!canDelete) throw new Error('You can only delete your own comment');
 
   const list = post.commentList || [];
   const objectIdsToPull = await getCommentSubtreeObjectIdsForPull(list, commentId);
@@ -469,12 +475,27 @@ export const deletePostByUser = async (postId, userId) => {
 
   const forumCollection = await forum();
   const post = await forumCollection.findOne({ _id: new ObjectId(postId) });
-  if (!post) throw new Error('Post not found');
+  if (!post) return true;
 
-  if (!post.userId || post.userId.toString() !== userIdStr) throw new Error('You can only delete your own post');
+  let canDelete = false;
+  if (post.userId && post.userId.toString() === userIdStr) canDelete = true;
+  const userCollection = await userCollectionFn();
+  const userDoc = await userCollection.findOne({ _id: new ObjectId(userIdStr) });
+  if (userDoc && userDoc.isAdmin) canDelete = true;
+  if (!canDelete) throw new Error('You can only delete your own post');
 
-  const del = await forumCollection.deleteOne({ _id: new ObjectId(postId), userId: new ObjectId(userIdStr) });
-  if (del.deletedCount === 0) throw new Error('Post not found');
+  let filter;
+  if (userDoc && userDoc.isAdmin) {
+    filter = { _id: new ObjectId(postId) };
+  } else {
+    filter = { _id: new ObjectId(postId), userId: new ObjectId(userIdStr) };
+  }
+  const del = await forumCollection.deleteOne(filter);
+  if (del.deletedCount === 0) {
+    const stillThere = await forumCollection.findOne({ _id: new ObjectId(postId) });
+    if (!stillThere) return true;
+    throw new Error('Post not found');
+  }
   return true;
 };
 
