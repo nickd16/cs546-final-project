@@ -110,6 +110,11 @@ const validateCommentBody = (body) => {
   return body.trim();
 };
 
+const validateRatingReplyBody = (body) => {
+  if (typeof body !== 'string' || !body.trim()) throw new Error('Reply body is required');
+  return body.trim();
+};
+
 const findCommentInLocation = (loc, commentIdStr) => {
   const list = emptyIfMissing(loc.commentList);
   const cid = new ObjectId(commentIdStr);
@@ -122,6 +127,15 @@ const findCommentInLocation = (loc, commentIdStr) => {
 const findRatingInLocation = (loc, ratingIdStr) => {
   const list = emptyIfMissing(loc.ratingList);
   const rid = new ObjectId(ratingIdStr);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]._id && list[i]._id.equals(rid)) return list[i];
+  }
+  return null;
+};
+
+const findRatingReplyInList = (replyList, replyIdStr) => {
+  const list = emptyIfMissing(replyList);
+  const rid = new ObjectId(replyIdStr);
   for (let i = 0; i < list.length; i++) {
     if (list[i]._id && list[i]._id.equals(rid)) return list[i];
   }
@@ -454,7 +468,11 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
   const commentList = emptyIfMissing(loc.commentList);
 
   const idStrings = [];
-  for (let i = 0; i < ratingList.length; i++) idStrings.push(normalizeUserIdString(ratingList[i].userId));
+  for (let i = 0; i < ratingList.length; i++) {
+    idStrings.push(normalizeUserIdString(ratingList[i].userId));
+    const replies = emptyIfMissing(ratingList[i].ratingReplyList);
+    for (let j = 0; j < replies.length; j++) idStrings.push(normalizeUserIdString(replies[j].userId));
+  }
   for (let i = 0; i < statusUpdateList.length; i++) idStrings.push(normalizeUserIdString(statusUpdateList[i].userId));
   for (let i = 0; i < commentList.length; i++) idStrings.push(normalizeUserIdString(commentList[i].userId));
   const userMap = await getUsernamesByIds(idStrings);
@@ -471,6 +489,37 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
       if (likedUserIdList.indexOf(currentUserIdStr) !== -1) myVote = 'like';
       if (dislikedUserIdList.indexOf(currentUserIdStr) !== -1) myVote = 'dislike';
     }
+
+    const processedRatingReplyList = [];
+    const ratingRepliesFlat = emptyIfMissing(rating.ratingReplyList);
+    for (let j = 0; j < ratingRepliesFlat.length; j++) {
+      const reply = ratingRepliesFlat[j];
+      const replyDate = buildDateDisplay(reply.dateTimeCreated);
+      const replyUid = normalizeUserIdString(reply.userId);
+      const rl = emptyIfMissing(reply.likedUserIdList).map((id) => id.toString());
+      const rd = emptyIfMissing(reply.dislikedUserIdList).map((id) => id.toString());
+      let replyMyVote = '';
+      if (currentUserIdStr) {
+        if (rl.indexOf(currentUserIdStr) !== -1) replyMyVote = 'like';
+        if (rd.indexOf(currentUserIdStr) !== -1) replyMyVote = 'dislike';
+      }
+      processedRatingReplyList.push({
+        _id: reply._id ? new ObjectId(reply._id.toString()) : new ObjectId(),
+        _idStr: reply._id ? reply._id.toString() : '',
+        userId: replyUid,
+        authorUsername: userMap[replyUid] || 'Unknown',
+        parentId: reply.parentId ? new ObjectId(reply.parentId.toString()) : null,
+        body: reply.body || '',
+        dateTimeISO: replyDate.dateTimeISO,
+        dateTimeLabel: replyDate.dateTimeLabel,
+        isMine: Boolean(currentUserIdStr && replyUid && replyUid === currentUserIdStr),
+        likeCount: rl.length,
+        dislikeCount: rd.length,
+        myVote: replyMyVote,
+      });
+    }
+    const replyThreads = await getCommentTree(processedRatingReplyList, null);
+
     ratings.push({
       _idStr: rating._id ? rating._id.toString() : '',
       userId: uid,
@@ -482,7 +531,8 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
       isMine: Boolean(currentUserIdStr && uid && uid === currentUserIdStr),
       likeCount: likedUserIdList.length,
       dislikeCount: dislikedUserIdList.length,
-      myVote
+      myVote,
+      replyThreads,
     });
   }
   ratings.sort((a, b) => String(b.dateTimeISO).localeCompare(String(a.dateTimeISO)));
@@ -614,6 +664,7 @@ export const addLocationRating = async (locationId, userId, score, review) => {
       ratingList[i].dateTimeCreated = new Date();
       if (!ratingList[i].likedUserIdList) ratingList[i].likedUserIdList = [];
       if (!ratingList[i].dislikedUserIdList) ratingList[i].dislikedUserIdList = [];
+      if (!Array.isArray(ratingList[i].ratingReplyList)) ratingList[i].ratingReplyList = [];
       updated = true;
     }
   }
@@ -626,11 +677,174 @@ export const addLocationRating = async (locationId, userId, score, review) => {
       score: cleanScore,
       review: cleanReview,
       likedUserIdList: [],
-      dislikedUserIdList: []
+      dislikedUserIdList: [],
+      ratingReplyList: [],
     });
   }
 
   await locationCollection.updateOne({_id: new ObjectId(locationId)}, {$set: {ratingList}});
+  return true;
+};
+
+export const addLocationRatingReply = async (locationId, ratingId, userId, body, parentIdStr = '') => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+  const cleanBody = validateRatingReplyBody(body);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const ratingList = emptyIfMissing(loc.ratingList).slice();
+  const ratingOid = new ObjectId(ratingId);
+  let parentId = null;
+  const parentTrimmed = parentIdStr && String(parentIdStr).trim() ? String(parentIdStr).trim() : '';
+  if (parentTrimmed) {
+    const pid = await validateIdField(parentTrimmed);
+    parentId = new ObjectId(pid);
+  }
+
+  let found = false;
+  for (let i = 0; i < ratingList.length; i++) {
+    if (!ratingList[i]._id || !ratingList[i]._id.equals(ratingOid)) continue;
+    found = true;
+    const replies = emptyIfMissing(ratingList[i].ratingReplyList).slice();
+    if (parentId) {
+      const parentReply = findRatingReplyInList(replies, parentId.toString());
+      if (!parentReply) throw new Error('Parent reply not found');
+    }
+    replies.push({
+      _id: new ObjectId(),
+      dateTimeCreated: new Date(),
+      userId: new ObjectId(userIdStr),
+      parentId,
+      body: cleanBody,
+      likedUserIdList: [],
+      dislikedUserIdList: [],
+    });
+    ratingList[i] = {...ratingList[i], ratingReplyList: replies};
+    break;
+  }
+  if (!found) throw new Error('Rating not found');
+
+  await locationCollection.updateOne({_id: new ObjectId(locationId)}, {$set: {ratingList}});
+  return true;
+};
+
+export const deleteLocationRatingReplyByUser = async (locationId, ratingId, replyId, userId) => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  replyId = await validateIdField(replyId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const ratingList = emptyIfMissing(loc.ratingList).slice();
+  const ratingOid = new ObjectId(ratingId);
+  let foundRating = false;
+
+  for (let i = 0; i < ratingList.length; i++) {
+    if (!ratingList[i]._id || !ratingList[i]._id.equals(ratingOid)) continue;
+    foundRating = true;
+    const replyList = emptyIfMissing(ratingList[i].ratingReplyList).slice();
+    const reply = findRatingReplyInList(replyList, replyId);
+    if (!reply) return true;
+
+    let canDelete = false;
+    if (reply.userId && reply.userId.toString() === userIdStr) canDelete = true;
+    const userCollection = await userCollectionFn();
+    const userDoc = await userCollection.findOne({_id: new ObjectId(userIdStr)});
+    if (userDoc && userDoc.isAdmin) canDelete = true;
+    if (!canDelete) throw new Error('You can only delete your own reply');
+
+    const objectIdsToPull = await getCommentSubtreeObjectIdsForPull(replyList, replyId);
+    const pullSet = new Set(objectIdsToPull.map((id) => id.toString()));
+    const kept = replyList.filter((r) => !pullSet.has(r._id.toString()));
+    ratingList[i] = {...ratingList[i], ratingReplyList: kept};
+    break;
+  }
+  if (!foundRating) throw new Error('Rating not found');
+
+  await locationCollection.updateOne({_id: new ObjectId(locationId)}, {$set: {ratingList}});
+  return true;
+};
+
+export const toggleLikeLocationRatingReply = async (locationId, ratingId, replyId, userId) => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  replyId = await validateIdField(replyId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const r = findRatingInLocation(loc, ratingId);
+  if (!r) throw new Error('Rating not found');
+  const rp = findRatingReplyInList(emptyIfMissing(r.ratingReplyList), replyId);
+  if (!rp) throw new Error('Rating reply not found');
+
+  const uid = new ObjectId(userIdStr);
+  const ratingOid = new ObjectId(ratingId);
+  const replyOid = new ObjectId(replyId);
+  const liked = emptyIfMissing(rp.likedUserIdList);
+  const inLiked = liked.some((id) => id.equals(uid));
+
+  if (inLiked) {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$pull: {'ratingList.$[rt].ratingReplyList.$[rp].likedUserIdList': uid}},
+      {arrayFilters: [{'rt._id': ratingOid}, {'rp._id': replyOid}]},
+    );
+  } else {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {
+        $addToSet: {'ratingList.$[rt].ratingReplyList.$[rp].likedUserIdList': uid},
+        $pull: {'ratingList.$[rt].ratingReplyList.$[rp].dislikedUserIdList': uid},
+      },
+      {arrayFilters: [{'rt._id': ratingOid}, {'rp._id': replyOid}]},
+    );
+  }
+  return true;
+};
+
+export const toggleDislikeLocationRatingReply = async (locationId, ratingId, replyId, userId) => {
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  replyId = await validateIdField(replyId);
+  const userIdStr = normalizeUserIdString(userId);
+  await validateIdField(userIdStr);
+
+  const locationCollection = await location();
+  const loc = await getLocationById(locationId);
+  const r = findRatingInLocation(loc, ratingId);
+  if (!r) throw new Error('Rating not found');
+  const rp = findRatingReplyInList(emptyIfMissing(r.ratingReplyList), replyId);
+  if (!rp) throw new Error('Rating reply not found');
+
+  const uid = new ObjectId(userIdStr);
+  const ratingOid = new ObjectId(ratingId);
+  const replyOid = new ObjectId(replyId);
+  const disliked = emptyIfMissing(rp.dislikedUserIdList);
+  const inDisliked = disliked.some((id) => id.equals(uid));
+
+  if (inDisliked) {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {$pull: {'ratingList.$[rt].ratingReplyList.$[rp].dislikedUserIdList': uid}},
+      {arrayFilters: [{'rt._id': ratingOid}, {'rp._id': replyOid}]},
+    );
+  } else {
+    await locationCollection.updateOne(
+      {_id: new ObjectId(locationId)},
+      {
+        $addToSet: {'ratingList.$[rt].ratingReplyList.$[rp].dislikedUserIdList': uid},
+        $pull: {'ratingList.$[rt].ratingReplyList.$[rp].likedUserIdList': uid},
+      },
+      {arrayFilters: [{'rt._id': ratingOid}, {'rp._id': replyOid}]},
+    );
+  }
   return true;
 };
 

@@ -591,6 +591,32 @@
     html += '<p><button type="submit">Submit report</button> <button type="button" id="locationRatingReportCancel">Cancel</button></p>';
     html += '</form>';
     html += '</dialog>';
+    html += '<dialog id="locationRatingReplyDialog">';
+    html += '<h4>Reply to rating</h4>';
+    html += '<form id="locationRatingReplyForm" action="/location/' + escapeAttribute(location._idStr) + '/rating/RATING_ID/reply" method="post">';
+    html += '<input type="hidden" name="parentId" id="location-rating-reply-parentid" value="">';
+    html += '<p id="locationRatingReplyErrors" class="error" role="alert"></p>';
+    html += '<p><label for="location-rating-reply-body">Your reply</label><br><textarea id="location-rating-reply-body" name="body" rows="4" required></textarea></p>';
+    html += '<p><button type="submit">Reply</button> <button type="button" id="locationRatingReplyCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
+    html += '<dialog id="locationRatingReplyReportDialog">';
+    html += '<h4>Report rating reply</h4>';
+    html += '<form id="locationRatingReplyReportForm" action="/location/' + escapeAttribute(location._idStr) + '/rating/RATING_ID/reply/REPLY_ID/report" method="post">';
+    html += '<p id="locationRatingReplyReportErrors" class="error" role="alert"></p>';
+    html += '<p><label for="location-rating-reply-report-reason">Reason for report</label><br>';
+    html += '<select id="location-rating-reply-report-reason" name="reason">';
+    html += '<option value="" disabled selected>Select reason</option>';
+    html += '<option value="spam">Spam</option>';
+    html += '<option value="harassment">Harassment</option>';
+    html += '<option value="hate">Hate</option>';
+    html += '<option value="violence">Violence</option>';
+    html += '<option value="other">Other</option>';
+    html += '</select></p>';
+    html += '<p><label for="location-rating-reply-report-description">Description</label><br><textarea id="location-rating-reply-report-description" name="description" rows="4" maxlength="2000"></textarea></p>';
+    html += '<p><button type="submit">Submit report</button> <button type="button" id="locationRatingReplyReportCancel">Cancel</button></p>';
+    html += '</form>';
+    html += '</dialog>';
     html += '<dialog id="locationStatusReportDialog">';
     html += '<h4>Report status</h4>';
     html += '<form id="locationStatusReportForm" action="/location/' + escapeAttribute(location._idStr) + '/status/STATUS_ID/report" method="post">';
@@ -688,6 +714,12 @@
           html += '</form>';
         }
         html += '</div>';
+        html += '<p class="location-rating-reply-trigger">';
+        html += '<button type="button" class="locationRatingReplyOpen" data-location-id="' + escapeAttribute(locationIdStr) + '" data-ratingid="' + escapeAttribute(rating._idStr) + '" data-parent-reply-id="">Reply</button>';
+        html += '</p>';
+        if (rating.replyThreads && rating.replyThreads.length) {
+          html += '<div class="commentTree rating-reply-tree">' + buildRatingReplyTreeHtml(locationIdStr, rating._idStr, rating.replyThreads) + '</div>';
+        }
       }
       html += '</li>';
     }
@@ -777,6 +809,37 @@
     return html;
   }
 
+  function buildRatingReplyTreeHtml(locationId, ratingId, replies) {
+    let html = '';
+    for (let i = 0; i < replies.length; i++) {
+      const reply = replies[i];
+      html += '<div class="location-comment-card location-rating-reply-card">';
+      html += '<p><strong>' + escapeHtml(reply.authorUsername || 'Unknown') + '</strong></p>';
+      html += '<p>' + escapeHtml(reply.body || '') + '</p>';
+      html += '<p>' + escapeHtml(reply.dateTimeLabel || '') + '</p>';
+      html += '<div class="location-comment-actions">';
+      html += '<form action="/location/' + escapeAttribute(locationId) + '/rating/' + escapeAttribute(ratingId) + '/reply/' + escapeAttribute(reply._idStr) + '/like" method="post">';
+      html += '<button type="submit">Like (' + escapeHtml(String(reply.likeCount || 0)) + ')</button>';
+      html += '</form>';
+      html += '<form action="/location/' + escapeAttribute(locationId) + '/rating/' + escapeAttribute(ratingId) + '/reply/' + escapeAttribute(reply._idStr) + '/dislike" method="post">';
+      html += '<button type="submit">Dislike (' + escapeHtml(String(reply.dislikeCount || 0)) + ')</button>';
+      html += '</form>';
+      html += '<button type="button" class="locationRatingReplyReportOpen" data-location-id="' + escapeAttribute(locationId) + '" data-ratingid="' + escapeAttribute(ratingId) + '" data-replyid="' + escapeAttribute(reply._idStr) + '">Report</button>';
+      html += '<button type="button" class="locationRatingReplyOpen" data-location-id="' + escapeAttribute(locationId) + '" data-ratingid="' + escapeAttribute(ratingId) + '" data-parent-reply-id="' + escapeAttribute(reply._idStr) + '">Reply</button>';
+      if (canShowDeleteForOwnerContent(reply.isMine)) {
+        html += '<form action="/location/' + escapeAttribute(locationId) + '/rating/' + escapeAttribute(ratingId) + '/reply/' + escapeAttribute(reply._idStr) + '/delete" method="post">';
+        html += '<button type="submit">Delete</button>';
+        html += '</form>';
+      }
+      html += '</div>';
+      if (reply.childrenCommentList && reply.childrenCommentList.length) {
+        html += '<div class="commentTree">' + buildRatingReplyTreeHtml(locationId, ratingId, reply.childrenCommentList) + '</div>';
+      }
+      html += '</div>';
+    }
+    return html;
+  }
+
   function bindLocationDetailEvents(location) {
     const replyDialog = document.getElementById('locationCommentReplyDialog');
     const replyForm = document.getElementById('locationCommentReplyForm');
@@ -816,6 +879,20 @@
     const ratingReportDescription = document.getElementById('location-rating-report-description');
     const ratingReportErrors = document.getElementById('locationRatingReportErrors');
     const ratingReportButtons = detailPanelElement.getElementsByClassName('locationRatingReportOpen');
+    const ratingReplyDialog = document.getElementById('locationRatingReplyDialog');
+    const ratingReplyForm = document.getElementById('locationRatingReplyForm');
+    const ratingReplyParentInput = document.getElementById('location-rating-reply-parentid');
+    const ratingReplyBodyInput = document.getElementById('location-rating-reply-body');
+    const ratingReplyErrors = document.getElementById('locationRatingReplyErrors');
+    const ratingReplyCancel = document.getElementById('locationRatingReplyCancel');
+    const ratingReplyButtons = detailPanelElement.getElementsByClassName('locationRatingReplyOpen');
+    const ratingReplyReportDialog = document.getElementById('locationRatingReplyReportDialog');
+    const ratingReplyReportForm = document.getElementById('locationRatingReplyReportForm');
+    const ratingReplyReportCancel = document.getElementById('locationRatingReplyReportCancel');
+    const ratingReplyReportReason = document.getElementById('location-rating-reply-report-reason');
+    const ratingReplyReportDescription = document.getElementById('location-rating-reply-report-description');
+    const ratingReplyReportErrors = document.getElementById('locationRatingReplyReportErrors');
+    const ratingReplyReportButtons = detailPanelElement.getElementsByClassName('locationRatingReplyReportOpen');
     const statusReportDialog = document.getElementById('locationStatusReportDialog');
     const statusReportForm = document.getElementById('locationStatusReportForm');
     const statusReportCancel = document.getElementById('locationStatusReportCancel');
@@ -842,6 +919,12 @@
       if (ratingReportErrors) ratingReportErrors.textContent = '';
     }
 
+    function resetLocationRatingReplyReportForm() {
+      if (ratingReplyReportReason) ratingReplyReportReason.selectedIndex = 0;
+      if (ratingReplyReportDescription) ratingReplyReportDescription.value = '';
+      if (ratingReplyReportErrors) ratingReplyReportErrors.textContent = '';
+    }
+
     function resetLocationStatusReportForm() {
       if (statusReportReason) statusReportReason.selectedIndex = 0;
       if (statusReportDescription) statusReportDescription.value = '';
@@ -852,6 +935,13 @@
       const text = parseRequiredTextValue(value);
       if (!text) return emptyMessage;
       if (typeof maxLength === 'number' && text.length > maxLength) return tooLongMessage;
+      return '';
+    }
+
+    function validateRatingReplyBodyClient(raw) {
+      if (raw !== undefined && raw !== null && typeof raw !== 'string') return 'Reply body must be text';
+      const text = typeof raw === 'string' ? raw.trim() : String(raw || '').trim();
+      if (!text) return 'Reply body is required';
       return '';
     }
 
@@ -897,6 +987,37 @@
         if (ratingReportForm && locationId && ratingId) ratingReportForm.setAttribute('action', '/location/' + locationId + '/rating/' + ratingId + '/report');
         if (ratingReportDialog && ratingReportDialog.showModal) ratingReportDialog.showModal();
         else if (ratingReportDialog) ratingReportDialog.setAttribute('open', '');
+      });
+    }
+
+    for (let i = 0; i < ratingReplyButtons.length; i++) {
+      ratingReplyButtons[i].addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        const ratingId = this.getAttribute('data-ratingid') || '';
+        let parentReplyId = this.getAttribute('data-parent-reply-id');
+        if (parentReplyId === null || parentReplyId === undefined) parentReplyId = '';
+        if (ratingReplyForm && locationId && ratingId) {
+          ratingReplyForm.setAttribute('action', '/location/' + locationId + '/rating/' + ratingId + '/reply');
+        }
+        if (ratingReplyParentInput) ratingReplyParentInput.value = parentReplyId;
+        if (ratingReplyBodyInput) ratingReplyBodyInput.value = '';
+        if (ratingReplyErrors) ratingReplyErrors.textContent = '';
+        if (ratingReplyDialog && ratingReplyDialog.showModal) ratingReplyDialog.showModal();
+        else if (ratingReplyDialog) ratingReplyDialog.setAttribute('open', '');
+      });
+    }
+
+    for (let i = 0; i < ratingReplyReportButtons.length; i++) {
+      ratingReplyReportButtons[i].addEventListener('click', function () {
+        const locationId = this.getAttribute('data-location-id') || location._idStr;
+        const ratingId = this.getAttribute('data-ratingid') || '';
+        const replyId = this.getAttribute('data-replyid') || '';
+        resetLocationRatingReplyReportForm();
+        if (ratingReplyReportForm && locationId && ratingId && replyId) {
+          ratingReplyReportForm.setAttribute('action', '/location/' + locationId + '/rating/' + ratingId + '/reply/' + replyId + '/report');
+        }
+        if (ratingReplyReportDialog && ratingReplyReportDialog.showModal) ratingReplyReportDialog.showModal();
+        else if (ratingReplyReportDialog) ratingReplyReportDialog.setAttribute('open', '');
       });
     }
 
@@ -956,6 +1077,30 @@
       ratingReportCancel.addEventListener('click', function () {
         resetLocationRatingReportForm();
         ratingReportDialog.removeAttribute('open');
+      });
+    }
+
+    if (ratingReplyCancel && ratingReplyDialog && ratingReplyDialog.close) {
+      ratingReplyCancel.addEventListener('click', function () {
+        if (ratingReplyErrors) ratingReplyErrors.textContent = '';
+        ratingReplyDialog.close();
+      });
+    } else if (ratingReplyCancel && ratingReplyDialog) {
+      ratingReplyCancel.addEventListener('click', function () {
+        if (ratingReplyErrors) ratingReplyErrors.textContent = '';
+        ratingReplyDialog.removeAttribute('open');
+      });
+    }
+
+    if (ratingReplyReportCancel && ratingReplyReportDialog && ratingReplyReportDialog.close) {
+      ratingReplyReportCancel.addEventListener('click', function () {
+        resetLocationRatingReplyReportForm();
+        ratingReplyReportDialog.close();
+      });
+    } else if (ratingReplyReportCancel && ratingReplyReportDialog) {
+      ratingReplyReportCancel.addEventListener('click', function () {
+        resetLocationRatingReplyReportForm();
+        ratingReplyReportDialog.removeAttribute('open');
       });
     }
 
@@ -1024,6 +1169,25 @@
         if (reason === 'other' && !description) {
           event.preventDefault();
           if (ratingReportErrors) ratingReportErrors.textContent = 'Error: Enter a description,';
+        }
+      });
+    }
+
+    if (ratingReplyReportForm) {
+      ratingReplyReportForm.addEventListener('submit', function (event) {
+        let reason = '';
+        if (ratingReplyReportReason && ratingReplyReportReason.value) reason = String(ratingReplyReportReason.value).trim();
+        let description = '';
+        if (ratingReplyReportDescription && ratingReplyReportDescription.value) description = ratingReplyReportDescription.value.trim();
+        if (ratingReplyReportErrors) ratingReplyReportErrors.textContent = '';
+        if (!reason) {
+          event.preventDefault();
+          if (ratingReplyReportErrors) ratingReplyReportErrors.textContent = 'Error: Select a reason,';
+          return;
+        }
+        if (reason === 'other' && !description) {
+          event.preventDefault();
+          if (ratingReplyReportErrors) ratingReplyReportErrors.textContent = 'Error: Enter a description,';
         }
       });
     }
@@ -1149,6 +1313,28 @@
           event.preventDefault();
           if (replyErrors) replyErrors.textContent = errorText;
         }
+      });
+    }
+
+    if (ratingReplyForm) {
+      ratingReplyForm.addEventListener('submit', function (event) {
+        if (ratingReplyErrors) ratingReplyErrors.textContent = '';
+        const bodyVal = ratingReplyForm.elements.body ? ratingReplyForm.elements.body.value : '';
+        const errorText = validateRatingReplyBodyClient(bodyVal);
+        if (errorText) {
+          event.preventDefault();
+          if (ratingReplyErrors) ratingReplyErrors.textContent = errorText;
+          return;
+        }
+        const ratingReplySubmitBtns = ratingReplyForm.querySelectorAll('button[type="submit"]');
+        for (let rbi = 0; rbi < ratingReplySubmitBtns.length; rbi++) ratingReplySubmitBtns[rbi].disabled = true;
+      });
+    }
+
+    if (ratingReplyBodyInput && ratingReplyErrors) {
+      ratingReplyBodyInput.addEventListener('input', function () {
+        const err = validateRatingReplyBodyClient(ratingReplyBodyInput.value);
+        if (!err) ratingReplyErrors.textContent = '';
       });
     }
 

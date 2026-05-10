@@ -16,7 +16,14 @@ const normalizeString = (s) => {
 
 const isMissingTargetError = (err) => {
   const message = err && err.message ? String(err.message) : String(err || '');
-  return message === 'Post not found' || message === 'Comment not found' || message === 'Location not found' || message === 'Rating not found' || message === 'Status update not found';
+  return (
+    message === 'Post not found' ||
+    message === 'Comment not found' ||
+    message === 'Location not found' ||
+    message === 'Rating not found' ||
+    message === 'Rating reply not found' ||
+    message === 'Status update not found'
+  );
 };
 
 const buildReportDateDisplay = (value) => {
@@ -72,6 +79,17 @@ const findRatingInLocation = (loc, ratingIdStr) => {
   const rid = new ObjectId(ratingIdStr);
   for (let i = 0; i < list.length; i++) {
     if (list[i]._id && list[i]._id.equals(rid)) return list[i];
+  }
+  return null;
+};
+
+const findRatingReplyInLocation = (loc, ratingIdStr, replyIdStr) => {
+  const rating = findRatingInLocation(loc, ratingIdStr);
+  if (!rating) return null;
+  const replies = Array.isArray(rating.ratingReplyList) ? rating.ratingReplyList : [];
+  const rid = new ObjectId(replyIdStr);
+  for (let i = 0; i < replies.length; i++) {
+    if (replies[i]._id && replies[i]._id.equals(rid)) return replies[i];
   }
   return null;
 };
@@ -191,6 +209,34 @@ export const createLocationCommentReport = async (reporterUserId, locationId, co
   });
 };
 
+export const createLocationRatingReplyReport = async (reporterUserId, locationId, ratingId, replyId, reason, description) => {
+  const reporterIdStr = normalizeUserIdString(reporterUserId);
+  await validateIdField(reporterIdStr);
+  locationId = await validateIdField(locationId);
+  ratingId = await validateIdField(ratingId);
+  replyId = await validateIdField(replyId);
+  const { cleanReason, cleanDescription } = validateReportReasonAndDescription(reason, description);
+
+  const { getLocationById } = await import('./location.js');
+  const loc = await getLocationById(locationId);
+  const reply = findRatingReplyInLocation(loc, ratingId, replyId);
+  if (!reply) throw new Error('Rating reply not found');
+
+  return createReportDoc({
+    dateTimeCreated: new Date(),
+    status: 'waiting',
+    dateReviewedAt: null,
+    forumOrLocation: 'location',
+    typeOfContent: 'rating_reply',
+    ratingId: new ObjectId(ratingId),
+    userId: new ObjectId(reporterIdStr),
+    contentId: new ObjectId(replyId),
+    locationOrForumId: new ObjectId(locationId),
+    reportReason: cleanReason,
+    body: cleanDescription,
+  });
+};
+
 export const createLocationRatingReport = async (reporterUserId, locationId, ratingId, reason, description) => {
   const reporterIdStr = normalizeUserIdString(reporterUserId);
   await validateIdField(reporterIdStr);
@@ -263,20 +309,28 @@ export const getWaitingReportsForAdmin = async () => {
 
     rows[i].reportedContentText = 'Reported content no longer available';
     rows[i].contentAreaLabel = rows[i].forumOrLocation === 'location' ? 'Location' : 'Forum';
-    rows[i].contentTypeLabel = rows[i].typeOfContent === 'post'
-      ? 'Post'
-      : rows[i].typeOfContent === 'comment'
-        ? 'Comment'
+    rows[i].contentTypeLabel =
+      rows[i].typeOfContent === 'post'
+        ? 'Post'
+        : rows[i].typeOfContent === 'comment'
+          ? 'Comment'
+          : rows[i].typeOfContent === 'rating'
+            ? 'Rating'
+            : rows[i].typeOfContent === 'rating_reply'
+              ? 'Rating reply'
+              : 'Status';
+    rows[i].acceptLabel =
+      rows[i].typeOfContent === 'comment'
+        ? 'Accept and delete comment'
         : rows[i].typeOfContent === 'rating'
-          ? 'Rating'
-          : 'Status';
-    rows[i].acceptLabel = rows[i].typeOfContent === 'comment'
-      ? 'Accept and delete comment'
-      : rows[i].typeOfContent === 'rating'
-        ? 'Accept and delete rating'
-        : rows[i].typeOfContent === 'status'
-          ? 'Accept and delete status'
-          : (rows[i].forumOrLocation === 'location' ? 'Accept and delete location' : 'Accept and delete post');
+          ? 'Accept and delete rating'
+          : rows[i].typeOfContent === 'rating_reply'
+            ? 'Accept and delete rating reply'
+            : rows[i].typeOfContent === 'status'
+              ? 'Accept and delete status'
+              : rows[i].forumOrLocation === 'location'
+                ? 'Accept and delete location'
+                : 'Accept and delete post';
 
     try {
       if (rows[i].forumOrLocation === 'forum' && rows[i].typeOfContent === 'post' && rows[i].contentId) {
@@ -316,6 +370,11 @@ export const getWaitingReportsForAdmin = async () => {
             const reviewText = typeof rating.review === 'string' ? rating.review.trim() : '';
             const ratingText = [scoreText, reviewText].filter(Boolean).join('\n\n');
             if (ratingText) rows[i].reportedContentText = ratingText;
+          }
+        } else if (rows[i].typeOfContent === 'rating_reply' && rows[i].ratingId && rows[i].contentId) {
+          const reply = findRatingReplyInLocation(loc, rows[i].ratingId.toString(), rows[i].contentId.toString());
+          if (reply && typeof reply.body === 'string' && reply.body.trim()) {
+            rows[i].reportedContentText = reply.body.trim();
           }
         } else if (rows[i].typeOfContent === 'status' && rows[i].contentId) {
           const status = findStatusInLocation(loc, rows[i].contentId.toString());
@@ -390,6 +449,21 @@ export const acceptReport = async (reportId, adminUserId) => {
       const { deleteLocationRatingByUser } = await import('./location.js');
       try {
         await deleteLocationRatingByUser(r.locationOrForumId.toString(), r.contentId.toString(), adminIdStr);
+      } catch (err) {
+        if (!isMissingTargetError(err)) throw err;
+      }
+    } else if (r.typeOfContent === 'rating_reply') {
+      if (!r.locationOrForumId) throw new Error('Report missing location id');
+      if (!r.ratingId) throw new Error('Report missing rating id');
+      if (!r.contentId) throw new Error('Report missing rating reply id');
+      const { deleteLocationRatingReplyByUser } = await import('./location.js');
+      try {
+        await deleteLocationRatingReplyByUser(
+          r.locationOrForumId.toString(),
+          r.ratingId.toString(),
+          r.contentId.toString(),
+          adminIdStr,
+        );
       } catch (err) {
         if (!isMissingTargetError(err)) throw err;
       }
