@@ -284,6 +284,11 @@
       document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!(form instanceof HTMLFormElement)) return;
+        var actionEarly = form.getAttribute('action') || '';
+        if (/\/forum\/[^/]+\/delete$/.test(actionEarly) || /\/forum\/[^/]+\/comment\/[^/]+\/delete$/.test(actionEarly)) {
+          var delBtns = form.querySelectorAll('button[type="submit"]');
+          for (var db = 0; db < delBtns.length; db++) delBtns[db].disabled = true;
+        }
         if (isForumLikeDislikeForm(form)) {
           e.preventDefault();
           var voteFlash = document.getElementById('forumAjaxActionError');
