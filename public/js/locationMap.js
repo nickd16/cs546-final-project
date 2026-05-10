@@ -696,7 +696,7 @@
     for (let i = 0; i < ratings.length; i++) {
       const rating = ratings[i];
       html += '<li>';
-      html += '<p><strong>' + escapeHtml(rating.authorUsername || 'Unknown') + '</strong> rated ' + escapeHtml(String(rating.score || '')) + '/5</p>';
+      html += '<p><strong>' + escapeHtml(rating.authorUsername || 'UNKNOWN') + '</strong> rated ' + escapeHtml(String(rating.score || '')) + '/5</p>';
       html += '<p>' + escapeHtml(rating.review || '') + '</p>';
       html += '<p>' + escapeHtml(rating.dateTimeLabel || '') + '</p>';
       if (locationIdStr && rating._idStr) {
@@ -750,7 +750,7 @@
     for (let i = 0; i < location.statuses.length; i++) {
       const status = location.statuses[i];
       html += '<li>';
-      html += '<p><strong>' + escapeHtml(status.authorUsername || 'Unknown') + '</strong></p>';
+      html += '<p><strong>' + escapeHtml(status.authorUsername || 'UNKNOWN') + '</strong></p>';
       html += '<p>' + escapeHtml(status.body || '') + '</p>';
       html += '<p>' + escapeHtml(status.dateTimeLabel || '') + '</p>';
       html += '<form action="/location/' + escapeAttribute(location._idStr) + '/status/' + escapeAttribute(status._idStr) + '/vote" method="post">';
@@ -783,7 +783,7 @@
     for (let i = 0; i < comments.length; i++) {
       const comment = comments[i];
       html += '<div class="location-comment-card">';
-      html += '<p><strong>' + escapeHtml(comment.authorUsername || 'Unknown') + '</strong></p>';
+      html += '<p><strong>' + escapeHtml(comment.authorUsername || 'UNKNOWN') + '</strong></p>';
       html += '<p>' + escapeHtml(comment.body || '') + '</p>';
       html += '<p>' + escapeHtml(comment.dateTimeLabel || '') + '</p>';
       html += '<div class="location-comment-actions">';
@@ -814,7 +814,7 @@
     for (let i = 0; i < replies.length; i++) {
       const reply = replies[i];
       html += '<div class="location-comment-card location-rating-reply-card">';
-      html += '<p><strong>' + escapeHtml(reply.authorUsername || 'Unknown') + '</strong></p>';
+      html += '<p><strong>' + escapeHtml(reply.authorUsername || 'UNKNOWN') + '</strong></p>';
       html += '<p>' + escapeHtml(reply.body || '') + '</p>';
       html += '<p>' + escapeHtml(reply.dateTimeLabel || '') + '</p>';
       html += '<div class="location-comment-actions">';

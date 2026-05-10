@@ -17,7 +17,7 @@ export const getWaitingRequestsForAdmin = async () => {
     try {
         usernameToRender = (await getUserById(reqEntry["userId"].toString()))["username"]
     } catch (e) {
-        usernameToRender = "Unknown";
+        usernameToRender = "UNKNOWN";
     }
     reqEntry["username"] = usernameToRender; // Give the front end usernames to render
     return reqEntry;

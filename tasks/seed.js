@@ -31,7 +31,7 @@ const main = async () => {
         otherDetails: locationDoc.otherDetails,
         limitedAccess: locationDoc.limitedAccess
     }));
-    console.log("Check " + sampleLocations[0].locationName + " for sample data!");
+    console.log("Check " + sampleLocations[0].locationName + " for location sample data!");
     const firstLocationId = sampleLocations[0]._id;
     sampleLocations[0].commentList = [{
                 "_id": new ObjectId('65b7c5f8f1d423b2f8e2c1a1'),
@@ -49,6 +49,15 @@ const main = async () => {
                 "userId": new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'),
                 "score": 4,
                 "review": "This is a rating!",
+                "ratingReplyList": [{
+                    "_id": new ObjectId('69fff0f9289ba8c51deedd0e'),
+                    "dateTimeCreated": new Date('2026-04-05T10:36:00Z'),
+                    "userId": new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'),
+                    "parentId": null,
+                    "body": "This is a rating comment!",
+                    "likedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1')],
+                    "dislikedUserIdList": []
+                }],
                 "likedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1')],
                 "dislikedUserIdList": [],
     }];
@@ -57,7 +66,7 @@ const main = async () => {
                 "createdByUserId": new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'),
                 "startDateTime": new Date("2026-04-05T10:30:00Z"),
                 "endDateTime": new Date("2026-04-05T10:45:00Z"),
-                "joinedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1')]
+                "joinedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1')]
     }];
     sampleLocations[0].statusUpdateList = [{
                 "_id": new ObjectId('61b3c2f8f1d4c3b2f8e4b1a1'),
@@ -87,11 +96,11 @@ const main = async () => {
             {
                 "_id": new ObjectId('65b7c5f8f1a423b2f9e2b1a1'),
                 "dateTimeCreated": new Date("2024-11-28T10:25:00Z"),
-                "userId": new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'),
+                "userId": new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1'),
                 "parentId": new ObjectId('65b7c5f8f1d423b2f8e2b1a1'),
                 "childrenCommentIdList": [],
                 "body": "This is a comment reply to another comment!",
-                "likedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1')],
+                "likedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'), new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1')],
                 "dislikedUserIdList": [],
             },
             {
@@ -102,12 +111,12 @@ const main = async () => {
                 "childrenCommentIdList": [],
                 "body": "This is a comment reply to another comment but again!",
                 "likedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1')],
-                "dislikedUserIdList": [],
+                "dislikedUserIdList": [new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1')],
             },
             {
                 "_id": new ObjectId('65b7c5f8f1a423b2f9a3b1a6'),
                 "dateTimeCreated": new Date("2024-11-28T10:30:00Z"),
-                "userId": new ObjectId('62b7c2f4f1d5c3b2f8e4b1a1'),
+                "userId": new ObjectId('62b7c2f4f1d5c3b2ffe4b1a1'),
                 "parentId": new ObjectId('65b7c5f8f1a423b2f9a2b1a6'),
                 "childrenCommentIdList": [],
                 "body": "This is a comment reply to another comment but again, again!",
@@ -145,7 +154,7 @@ const main = async () => {
             "dateTimeCreated": new Date("2024-03-29T12:30:00Z"),
             "username": "bob",
             "hashedPassword": "$2b$10$07fW3Rl0/IWtJO7QY9Wufu70C/HUjps5YC7M0QBGQe9Gm.QN.3SNG",
-            "favLocationIds": [],
+            "favLocationIds": [firstLocationId],
             "isAdmin": false
         },
     ];
@@ -189,6 +198,46 @@ const main = async () => {
             "locationOrForumId": new ObjectId(firstLocationId),
             "reportReason": "spam",
             "body": "Sample report description text for comment on location."
+        },
+        {
+            "_id": new ObjectId("6a00b635dd6f3fbc9c65731e"),
+            "dateTimeCreated": new Date("2026-05-10T16:45:41.395Z"),
+            "status": "waiting",
+            "dateReviewedAt": null,
+            "forumOrLocation": "location",
+            "typeOfContent": "rating_reply",
+            "ratingId": new ObjectId("51b3c2f8f1d4c3b2f8e4b1a1"),
+            "userId": new ObjectId("62b7c2f4f1d5c3b2ffe4b1a1"),
+            "contentId": new ObjectId("69fff0f9289ba8c51deedd0e"),
+            "locationOrForumId": new ObjectId("32911c6ba3a517b34bf46bd7"),
+            "reportReason": "harassment",
+            "body": "This is a rating comment report!"
+        },
+        {
+            "_id": new ObjectId("6a00b641dd6f3fbc9c65731f"),
+            "dateTimeCreated": new Date("2026-05-10T16:45:53.568Z"),
+            "status": "waiting",
+            "dateReviewedAt": null,
+            "forumOrLocation": "location",
+            "typeOfContent": "rating",
+            "userId": new ObjectId("62b7c2f4f1d5c3b2ffe4b1a1"),
+            "contentId": new ObjectId("51b3c2f8f1d4c3b2f8e4b1a1"),
+            "locationOrForumId": new ObjectId("32911c6ba3a517b34bf46bd7"),
+            "reportReason": "hate",
+            "body": "This is a rating report!"
+        },
+        {
+            "_id": new ObjectId("6a00b64fdd6f3fbc9c657320"),
+            "dateTimeCreated": new Date("2026-05-10T16:46:07.520Z"),
+            "status": "waiting",
+            "dateReviewedAt": null,
+            "forumOrLocation": "location",
+            "typeOfContent": "status",
+            "userId": new ObjectId("62b7c2f4f1d5c3b2ffe4b1a1"),
+            "contentId": new ObjectId("61b3c2f8f1d4c3b2f8e4b1a1"),
+            "locationOrForumId": new ObjectId("32911c6ba3a517b34bf46bd7"),
+            "reportReason": "hate",
+            "body": "This is a status update report!"
         }
     ];
 

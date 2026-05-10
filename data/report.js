@@ -302,9 +302,9 @@ export const getWaitingReportsForAdmin = async () => {
     rows[i].dateTimeISO = createdDisplay.dateTimeISO;
     try {
       const u = await getUserById(rows[i].userId.toString());
-      rows[i].username = u && u.username ? u.username : 'Unknown';
+      rows[i].username = u && u.username ? u.username : 'UNKNOWN';
     } catch (err) {
-      rows[i].username = 'Unknown';
+      rows[i].username = 'UNKNOWN';
     }
 
     rows[i].reportedContentText = 'Reported content no longer available';

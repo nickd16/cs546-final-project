@@ -507,7 +507,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
         _id: reply._id ? new ObjectId(reply._id.toString()) : new ObjectId(),
         _idStr: reply._id ? reply._id.toString() : '',
         userId: replyUid,
-        authorUsername: userMap[replyUid] || 'Unknown',
+        authorUsername: userMap[replyUid] || 'UNKNOWN',
         parentId: reply.parentId ? new ObjectId(reply.parentId.toString()) : null,
         body: reply.body || '',
         dateTimeISO: replyDate.dateTimeISO,
@@ -523,7 +523,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
     ratings.push({
       _idStr: rating._id ? rating._id.toString() : '',
       userId: uid,
-      authorUsername: userMap[uid] || 'Unknown',
+      authorUsername: userMap[uid] || 'UNKNOWN',
       score: rating.score,
       review: rating.review || '',
       dateTimeISO: dateData.dateTimeISO,
@@ -552,7 +552,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
     statuses.push({
       _idStr: status._id ? status._id.toString() : '',
       userId: uid,
-      authorUsername: userMap[uid] || 'Unknown',
+      authorUsername: userMap[uid] || 'UNKNOWN',
       body: status.body || '',
       dateTimeISO: dateData.dateTimeISO,
       dateTimeLabel: dateData.dateTimeLabel,
@@ -598,7 +598,7 @@ export const getLocationDetailsForDisplay = async (locationId, currentUserId = '
       _id: comment._id ? new ObjectId(comment._id.toString()) : new ObjectId(),
       _idStr: comment._id ? comment._id.toString() : '',
       userId: uid,
-      authorUsername: userMap[uid] || 'Unknown',
+      authorUsername: userMap[uid] || 'UNKNOWN',
       parentId: comment.parentId ? new ObjectId(comment.parentId.toString()) : null,
       body: comment.body || '',
       dateTimeISO: dateData.dateTimeISO,
@@ -1247,6 +1247,9 @@ export const updateLocationById = async (locationId, locationInput) => {
 export const deleteLocationById = async (locationId) => {
   locationId = await validateIdField(locationId);
   const locationCollection = await location();
+  const userCollection = await userCollectionFn();
+  userCollection.updateMany({}, { $pull: { favLocationIds: new ObjectId(locationId) } });
+
   const result = await locationCollection.deleteOne({_id: new ObjectId(locationId)});
   if (!result || result.deletedCount !== 1) throw new Error('Could not delete location');
   return true;

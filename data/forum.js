@@ -156,9 +156,9 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
     try {
       const u = await userCollection.findOne({ _id: new ObjectId(uid) });
       if (u && u.username) userMap[uid] = u.username;
-      else userMap[uid] = 'Unknown';
+      else userMap[uid] = 'UNKNOWN';
     } catch (err) {
-      userMap[uid] = 'Unknown';
+      userMap[uid] = 'UNKNOWN';
     }
   }
 
@@ -168,7 +168,7 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
     const key = p.userId.toString();
     const postIdStr = p._id.toString();
     let authorUsername = userMap[key];
-    if (authorUsername === undefined || authorUsername === null) authorUsername = 'Unknown';
+    if (authorUsername === undefined || authorUsername === null) authorUsername = 'UNKNOWN';
 
     const postDates = buildForumDateDisplay(p.dateTimeCreated);
     const dateTimeISO = postDates.dateTimeISO;
@@ -190,9 +190,15 @@ export const getAllPostsForDisplay = async (catagoryFilter, q, currentUserId, on
     let processedCommentList = p.commentList;
     if (!processedCommentList) processedCommentList = [];
     for (let comment of processedCommentList) {
-      const userOb = await getUserById(comment["userId"].toString());
+      let userOb = null;
+      try {
+        userOb = await getUserById(comment["userId"].toString());
+        comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
+      } catch (e) {
+        comment["authorUsername"] = "UNKNOWN";
+      }
+
       comment["isMine"] = comment["userId"].toString() === currentUserIdStr;
-      comment["authorUsername"] = userOb["username"]; // Give the front end usernames to render
       const commentDates = buildForumDateDisplay(comment.dateTimeCreated);
       comment["dateTimeLabel"] = commentDates.dateTimeLabel;
       comment["dateTimeISO"] = commentDates.dateTimeISO;
